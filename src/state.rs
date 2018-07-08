@@ -1,6 +1,6 @@
 use std::cmp::{min, max};
 
-use piece::Piece;
+use piece::{Piece, Pieces, Id};
 
 const PIECE_COUNT: usize = 20;
 
@@ -9,22 +9,61 @@ const PIECE_COUNT: usize = 20;
 // The z field is a packed representation, where the lower
 // 4 bits represent rotation and the upper 4 represent height
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
-pub struct Moves {
+pub struct State {
     pub x: [u8; PIECE_COUNT],
     pub y: [u8; PIECE_COUNT],
     pub z: [u8; PIECE_COUNT],
 }
 
-impl Moves {
-    pub fn new() -> Moves {
-        Moves {
+impl State {
+    pub fn new() -> State {
+        State {
             x: [0x00; PIECE_COUNT],
             y: [0x00; PIECE_COUNT],
             z: [0xFF; PIECE_COUNT],
         }
     }
 
-    pub fn place(&self, piece: &Piece, x: i32, y: i32, z: u8) -> Moves {
+    // Gets a placed piece from the array
+    pub fn get<'a>(&self, i: Id, pieces: &'a Pieces) -> &'a Piece {
+        debug_assert!(self.z[i.0] != 0xFF);
+        return pieces.at(i, (self.z[i.0] & 0x0F) as usize);
+    }
+
+    // Returns the total number of layers in the state, or -1
+    pub fn layers(&self) -> i32 {
+        self.z.iter()
+            .filter(|&z| { *z != 0xFF })
+            .map(|z| *z as i32 >> 4).max().unwrap_or(-1)
+    }
+
+    // Returns a filtered state that only includes pieces
+    // on a particular layer.  This is useful for debug
+    // printing of the game state.
+    pub fn layer(&self, a: u8) -> State {
+        let mut out = self.clone();
+        for z in &mut out.z {
+            if (*z >> 4) != a {
+                *z = 0xFF;
+            }
+        }
+        return out;
+    }
+
+    pub fn size(&self, pieces: &Pieces) -> (i32, i32) {
+        let mut w = 0;
+        let mut h = 0;
+        for i in 0..PIECE_COUNT {
+            if self.z[i] != 0xFF {
+                let p = self.get(Id(i), pieces);
+                w = max(w, self.x[i] as i32 + p.w);
+                h = max(h, self.y[i] as i32 + p.h);
+            }
+        }
+        return (w, h);
+    }
+
+    pub fn place(&self, piece: &Piece, x: i32, y: i32, z: u8) -> State {
         // Clone the existing state, and assert that this piece hasn't
         // already been placed.
         let mut out = self.clone();
@@ -77,12 +116,12 @@ impl Moves {
 
 #[cfg(test)]
 mod tests {
-    use moves::Moves;
-    use piece::{Id, Piece};
+    use state::State;
+    use piece::{Id, Piece, Pieces};
 
     #[test]
     fn upper_bound_score() {
-        let g = Moves::new();
+        let g = State::new();
         {
             let tot: usize = (0..10).map(|x| { x * x }).sum();
             let tot = tot * 2;
@@ -104,9 +143,10 @@ mod tests {
                  + 5 * (5 + 6) + 6 * (6 + 7) + 7 * (7 + 8) + 8 * (8 + 9) + 9 * 9;
         assert_eq!(g.upper_bound_score(), tot);
     }
+
     #[test]
     fn score() {
-        let g = Moves::new();
+        let g = State::new();
         assert_eq!(g.score(), 0);
 
         let g = g.place(&Piece::from_id(Id(2)), 0, 0, 1);
@@ -114,6 +154,12 @@ mod tests {
 
         let g = g.place(&Piece::from_id(Id(3)), 0, 0, 2);
         assert_eq!(g.score(), 3);
+    }
+
+    #[test]
+    fn size() {
+        let s = State::new().place(&Piece::from_id(Id(0)), 0, 0, 0);
+        assert_eq!(s.size(&Pieces::new()), (3, 4));
     }
 }
 

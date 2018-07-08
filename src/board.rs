@@ -1,6 +1,7 @@
-use std::cmp::{min, max};
+use std::cmp::max;
 
-use piece::{Piece, Id};
+use piece::{Id, Pieces, Piece};
+use state::State;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -19,13 +20,45 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn new() -> Board {
-        Board {
-            grid: Vec::new(),
-            w: 0,
-            h: 0,
+    pub fn from_state(state: &State, pieces: &Pieces) -> Board {
+        let (w, h) = state.size(pieces);
+        let n = (w * h) as usize;
+        let mut out = Board {
+            grid: Vec::with_capacity(n),
+            w: w,
+            h: h,
             z: -1,
+        };
+
+        // Fill the grid with the background cell
+        let bg = out.at(-1, -1);
+        for _ in 0..n {
+            out.grid.push(bg);
         }
+
+        for (i, z) in state.z.iter().enumerate() {
+            if *z != 0xFF {
+                let x = state.x[i] as i32;
+                let y = state.y[i] as i32;
+
+                let p = state.get(Id(i), pieces);
+                for &(px, py) in p.pts.iter() {
+                    debug_assert!(px >= 0);
+                    debug_assert!(py >= 0);
+
+                    let z = (*z >> 4) as i32;
+                    let j = out.index(px + x, py + y);
+
+                    debug_assert!(z != out.grid[j].z);
+                    if z > out.grid[j].z {
+                        out.grid[j].id = p.id;
+                        out.grid[j].z = z;
+                    }
+                    out.z = max(z, out.z);
+                }
+            }
+        }
+        return out;
     }
 
     fn at(&self, x: i32, y: i32) -> Cell {
@@ -33,6 +66,20 @@ impl Board {
             self.grid[self.index(x, y)]
         } else {
             Cell { id: Id(0xFF), z: -1 }
+        }
+    }
+
+    pub fn print(&self) {
+        for x in 0..self.w {
+            for y in (0..self.h).rev() {
+                let c = self.at(x, y);
+                if c.z == -1 {
+                    print!(" ");
+                } else {
+                    print!("{}", c.id.0 >> 1);
+                }
+            }
+            print!("\n");
         }
     }
 
@@ -44,10 +91,14 @@ impl Board {
 
     // Checks whether a piece can be placed at the given location
     // Returns the Z value of the to-be-placed piece, or -1
-    pub fn check(&self, p: &Piece, x: i32, y: i32) -> bool {
+    pub fn check(&self, p: &Piece, x: i32, y: i32) -> i32 {
         // Special-case: if the board is empty, then we can place at 0,0
         if self.w == 0 && self.h == 0 {
-            return x == 0 && y == 0;
+            if x == 0 && y == 0 {
+                return 0;
+            } else {
+                return -1;
+            }
         }
 
         #[derive(Eq, PartialEq)]
@@ -66,7 +117,7 @@ impl Board {
             // we know that the piece can't be placed here.
             match z {
                 None => z = Some(c.z),
-                Some(z_) => if z_ != c.z { return false }
+                Some(z_) => if z_ != c.z { return -1 }
             }
 
             // Count the number of pieces that we've placed over
@@ -81,96 +132,39 @@ impl Board {
         // If we're placing this piece off of ground level, it must be
         // positioned over at least two other pieces
         if z > 0 && over != Over::TwoOrMore {
-            return false;
+            return -1;
         }
 
         // Finally, check to see whether we're sharing an edge with any
         // other pieces at the new Z level.
         for &(px, py) in &p.neighbors {
             if self.at(x + px, y + py).z == z {
-                return true;
+                return z;
             }
         }
         // Otherwise, the positioning is only valid if this is the first
         // piece on a new layer.
-        return z > self.z;
-    }
-
-    pub fn insert(&self, p: &Piece, x: i32, y: i32) -> (Board, u8) {
-        // Figure out how much we want to shift by
-        let xmin = min(x, 0);
-        let ymin = min(y, 0);
-        let xmax = max(self.w, x + p.w);
-        let ymax = max(self.h, y + p.h);
-
-        let mut out = self.expand(
-            xmax - xmin, ymax - ymin,
-            -xmin, -ymin);
-
-        let x = x - xmin;
-        let y = y - ymin;
-
-        let mut z = -1;
-        for &(px, py) in &p.pts {
-            debug_assert!(px >= 0);
-            debug_assert!(py >= 0);
-
-            let i = out.index(px + x, py + y);
-            out.grid[i].id = p.id;
-            out.grid[i].z += 1;
-
-            // Make sure that the Z position is consistent
-            debug_assert!(z == -1 || out.grid[i].z == z);
-            z = out.grid[i].z;
+        if z > self.z {
+            return z;
+        } else {
+            return -1;
         }
-
-        debug_assert!(z >= 0);
-        out.z = max(out.z, z);
-        (out, z as u8)
-    }
-
-    pub fn expand(&self, w: i32, h: i32, dx: i32, dy: i32) -> Board {
-        debug_assert!(w >= self.w);
-        debug_assert!(h >= self.h);
-
-        let n = (w * h) as usize;
-        let mut out = Board {
-            grid: Vec::with_capacity(n),
-            w: w,
-            h: h,
-            z: self.z,
-        };
-
-        // Fill the grid with the background cell
-        for _ in 0..n {
-            out.grid.push(self.at(-1, -1));
-        }
-
-        // Then, transplant the old grid onto the new one
-        for x in 0..self.w {
-            for y in 0..self.h {
-                let index_old = self.index(x, y);
-                let index_new = out.index(x + dx, y + dy);
-                out.grid[index_new] = self.grid[index_old];
-            }
-        }
-        out
     }
 }
 
 #[cfg(test)]
 mod tests {
     use board::Board;
+    use piece::{Piece, Id, Pieces};
+    use state::State;
 
     #[test]
-    fn expand() {
-        let b = Board::new();
-        let b = b.expand(10, 20, 0, 0);
-        assert_eq!(b.w, 10);
-        assert_eq!(b.h, 20);
+    fn from_state() {
+        let s = State::new();
+        let s = s.place(&Piece::from_id(Id(0)), 0, 0, 0);
 
-        let b = b.expand(12, 20, 0, 0);
-        assert_eq!(b.w, 12);
-        assert_eq!(b.h, 20);
+        let b = Board::from_state(&s, &Pieces::new());
+        assert_eq!(b.w, 3);
+        assert_eq!(b.h, 4);
     }
 }
