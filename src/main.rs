@@ -31,11 +31,6 @@ impl Worker {
         }
         self.seen.insert(state.clone());
 
-        // Create a list of all the available pieces
-        let available = state.z.iter().enumerate()
-            .filter(|&(_, z)| { *z == 0xFF })
-            .map(|(i, _)| { Id(i) });
-
         let score = state.score() as i32;
         if score > self.best {
             self.best = score;
@@ -49,7 +44,8 @@ impl Worker {
 
         let mut todo: Vec<State> = Vec::new();
         let board = Board::from_state(&state, &self.pieces);
-        for i in available {
+
+        for i in state.unplaced() {
             for rot in 0..4 {
                 let p = self.pieces.at(i, rot);
 

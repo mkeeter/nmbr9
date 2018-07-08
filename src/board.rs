@@ -36,26 +36,23 @@ impl Board {
             out.grid.push(bg);
         }
 
-        for (i, z) in state.z.iter().enumerate() {
-            if *z != 0xFF {
-                let x = state.x[i] as i32;
-                let y = state.y[i] as i32;
+        for i in state.placed() {
+            let x = state.x[i.0] as i32;
+            let y = state.y[i.0] as i32;
 
-                let p = state.get(Id(i), pieces);
-                for &(px, py) in p.pts.iter() {
-                    debug_assert!(px >= 0);
-                    debug_assert!(py >= 0);
+            for &(px, py) in state.get(i, pieces).pts.iter() {
+                debug_assert!(px >= 0);
+                debug_assert!(py >= 0);
 
-                    let z = (*z >> 4) as i32;
-                    let j = out.index(px + x, py + y);
+                let z = state.z(i);
+                let j = out.index(px + x, py + y);
 
-                    debug_assert!(z != out.grid[j].z);
-                    if z > out.grid[j].z {
-                        out.grid[j].id = p.id;
-                        out.grid[j].z = z;
-                    }
-                    out.z = max(z, out.z);
+                debug_assert!(z != out.grid[j].z);
+                if z > out.grid[j].z {
+                    out.grid[j].id = i;
+                    out.grid[j].z = z;
                 }
+                out.z = max(z, out.z);
             }
         }
         return out;
