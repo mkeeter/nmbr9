@@ -7,7 +7,7 @@ use piece::{Piece, Id};
 #[derive(Copy, Debug, Clone)]
 struct Cell {
     id: Id,
-    z: i8,
+    z: i32,
 }
 
 #[derive(Debug)]
@@ -15,6 +15,7 @@ pub struct Board {
     grid: Vec<Cell>,
     pub w: i32,
     pub h: i32,
+    pub z: i32,
 }
 
 impl Board {
@@ -23,12 +24,8 @@ impl Board {
             grid: Vec::new(),
             w: 0,
             h: 0,
+            z: -1,
         }
-    }
-
-    pub fn layers(&self) -> usize {
-        (self.grid.iter().map(|&c| { c.z }).max().unwrap_or(-1) + 1)
-            as usize
     }
 
     fn at(&self, x: i32, y: i32) -> Cell {
@@ -47,10 +44,10 @@ impl Board {
 
     // Checks whether a piece can be placed at the given location
     // Returns the Z value of the to-be-placed piece, or -1
-    pub fn check(&self, p: &Piece, x: i32, y: i32) -> i8 {
-        // Special-case: if the board is empty, then we can place anywhere
+    pub fn check(&self, p: &Piece, x: i32, y: i32) -> bool {
+        // Special-case: if the board is empty, then we can place at 0,0
         if self.w == 0 && self.h == 0 {
-            return 0;
+            return x == 0 && y == 0;
         }
 
         #[derive(Eq, PartialEq)]
@@ -58,7 +55,7 @@ impl Board {
 
         // Stores the index of pieces that we're placed above
         let mut over = Over::Zero;
-        let mut z: Option<i8> = None;
+        let mut z: Option<i32> = None;
 
         // Iterate over every point in the piece, checking its Z level
         // and storing whether it overlaps with at least two other pieces
@@ -69,7 +66,7 @@ impl Board {
             // we know that the piece can't be placed here.
             match z {
                 None => z = Some(c.z),
-                Some(z_) => if z_ != c.z { return -1 }
+                Some(z_) => if z_ != c.z { return false }
             }
 
             // Count the number of pieces that we've placed over
@@ -84,17 +81,19 @@ impl Board {
         // If we're placing this piece off of ground level, it must be
         // positioned over at least two other pieces
         if z > 0 && over != Over::TwoOrMore {
-            return -1;
+            return false;
         }
 
         // Finally, check to see whether we're sharing an edge with any
         // other pieces at the new Z level.
         for &(px, py) in &p.neighbors {
             if self.at(x + px, y + py).z == z {
-                return z;
+                return true;
             }
         }
-        return -1;
+        // Otherwise, the positioning is only valid if this is the first
+        // piece on a new layer.
+        return z > self.z;
     }
 
     pub fn insert(&self, p: &Piece, x: i32, y: i32) -> (Board, u8) {
@@ -126,6 +125,7 @@ impl Board {
         }
 
         debug_assert!(z >= 0);
+        out.z = max(out.z, z);
         (out, z as u8)
     }
 
@@ -138,6 +138,7 @@ impl Board {
             grid: Vec::with_capacity(n),
             w: w,
             h: h,
+            z: self.z,
         };
 
         // Fill the grid with the background cell
