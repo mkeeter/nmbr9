@@ -126,6 +126,12 @@ impl Board {
             return -1;
         }
 
+        // If this is the first piece on a new layer, then we don't
+        // have to run edge checking.
+        if z > self.z {
+            return z;
+        }
+
         // Finally, check to see whether we're sharing an edge with any
         // other pieces at the new Z level.
         for &(px, py) in &p.neighbors {
@@ -133,13 +139,9 @@ impl Board {
                 return z;
             }
         }
-        // Otherwise, the positioning is only valid if this is the first
-        // piece on a new layer.
-        if z > self.z {
-            return z;
-        } else {
-            return -1;
-        }
+
+        // Otherwise, we failed, because there's no shared edge.
+        return -1;
     }
 }
 

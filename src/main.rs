@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::sync::RwLock;
+use std::time::SystemTime;
 
 mod state;
 mod piece;
@@ -9,35 +10,39 @@ use piece::{Pieces, Id};
 use state::{State, PIECE_COUNT};
 use board::Board;
 
-struct Worker {
+struct Worker<'a> {
     best_score: i32,
     best_state: State,
-    pieces: Pieces,
+    pieces: &'a Pieces,
+    results: &'a RwLock<Results>,
     seen: HashSet<State>,
 }
 
-impl Worker {
-    fn new() -> Worker {
+impl<'a> Worker<'a> {
+    fn new(pieces: &'a Pieces, results: &'a RwLock<Results>) -> Worker<'a> {
         Worker {
             best_score: -1,
             best_state: State::new(),
-            pieces: Pieces::new(),
+            pieces: pieces,
+            results: results,
             seen: HashSet::new(),
         }
     }
 
-    fn run(&mut self, state: &State, results: &Results) {
+    fn run(&mut self, state: &State) {
         if self.seen.contains(&state)
         {
             return;
         }
         self.seen.insert(state.clone());
 
+        // This is the largest possible score from the current state
+        let my_max_score = self.results.read().unwrap().max_score(state);
+
         let score = state.score() as i32;
         if score > self.best_score {
             self.best_score = score;
             self.best_state = state.clone();
-            //self.print_state(state);
         }
 
         let mut todo: Vec<State> = Vec::new();
@@ -60,16 +65,13 @@ impl Worker {
         }
 
         for next in todo.iter() {
-            let b = next.unplaced_bitfield();
-            debug_assert!(results.scores[b] != -1);
+            if my_max_score == self.best_score {
+                return;
+            }
 
-            let layers = next.layers();
-            debug_assert!(layers != -1);
-
-            let max_score = next.score() as i32 +
-                            (layers + 1) * results.deltas[b];
-            if max_score > self.best_score {
-                self.run(next, results);
+            let next_max_score = self.results.read().unwrap().max_score(next);
+            if next_max_score > self.best_score {
+                self.run(next);
             }
         }
     }
@@ -96,6 +98,21 @@ impl Results {
             scores: vec![-1; 1 << PIECE_COUNT],
             deltas: vec![ 0; 1 << PIECE_COUNT],
         }
+    }
+
+    fn max_score(&self, state: &State) -> i32 {
+        let b = state.unplaced_bitfield();
+
+        let available_score = self.scores[b];
+        debug_assert!(available_score != -1);
+
+        let layers = state.layers();
+        debug_assert!(layers != -1);
+
+        let available_delta = self.deltas[b];
+
+        return state.score() as i32 + available_score +
+                        (layers + 1) * available_delta;
     }
 }
 
@@ -134,42 +151,71 @@ impl Iterator for Swapper {
 ////////////////////////////////////////////////////////////////////////////////
 
 fn main() {
+    let pieces = Pieces::new();
+
     let mut todo: Vec<usize> = (0..(1<<PIECE_COUNT)).collect();
     todo.sort_by(|a, b| a.count_ones().cmp(&b.count_ones()));
 
-    let mut results = Results::new();
-
+    let results = RwLock::new(Results::new());
     let mut global_best = 0;
+
+    {   // Preload the deltas array, since we can do that quickly
+        let mut writer = results.write().unwrap();
+        for t in todo.iter() {
+            for i in 0..PIECE_COUNT {
+                if *t & (1 << i) != 0 {
+                    writer.deltas[*t] += (i >> 1) as i32;
+                }
+            }
+        }
+    }
+
     let count = todo.len();
+    let mut max_bits = 0;
+    let mut start_time = SystemTime::now();
+
     for (done, t) in todo.iter().enumerate() {
         // We spread symmetric results across every possible
         // bitfield, so this one could be finished before we get
         // to it.
-        if results.scores[*t] != -1 {
+        let percent_done = 100f32 * done as f32 / count as f32;
+        if results.read().unwrap().scores[*t] != -1 {
+
+            print!("\r{} / {} ({}%) [{}, skipped]                ",
+                   done, count, percent_done, t);
             continue;
+        }
+
+        let this_bits = t.count_ones();
+        if this_bits > max_bits {
+            println!("\n============================================================");
+            println!("Completed all {}-bit patterns in {:?}",
+                     max_bits, start_time.elapsed().unwrap());
+            println!("\n============================================================");
+            max_bits = this_bits;
+            start_time = SystemTime::now();
         }
 
         let mut state = State::new();
         for i in 0..PIECE_COUNT {
             if t & (1 << i) == 0 {
                 state = state.discard(Id(i));
-            } else {
-                results.deltas[*t] += (i >> 1) as i32;
             }
         }
 
-        let mut worker = Worker::new();
-        worker.run(&state, &results);
-        results.scores[*t] = worker.best_score;
+        let mut worker = Worker::new(&pieces, &results);
+        worker.run(&state);
 
-        // Apply these results to every symmetric set of pieces
-        for u in Swapper(*t) {
-            results.scores[u] = results.scores[*t];
-            results.deltas[u] = results.deltas[*t];
+        {   // Apply these results to every symmetric set of pieces
+            let mut writer = results.write().unwrap();
+            writer.scores[*t] = worker.best_score;
+            for u in Swapper(*t) {
+                writer.scores[u] = worker.best_score;
+            }
         }
 
         if worker.best_score > global_best {
-            println!("------------------------------------------------------------");
+            println!("\n------------------------------------------------------------");
             println!("Got new global best: {}", worker.best_score);
             for layer in 0..worker.best_state.layers() + 1 {
                 Board::from_state(&worker.best_state.layer(layer as u8),
@@ -180,7 +226,8 @@ fn main() {
             println!("------------------------------------------------------------");
         }
 
-        println!("{} / {} ({}%)", done, count, 100f32 * done as f32 / count as f32);
+        print!("\r{} / {} ({}%) [{}]                       ",
+               done, count, percent_done, t);
     }
 }
 
