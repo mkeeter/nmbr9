@@ -92,15 +92,9 @@ impl Board {
             }
         }
 
-        #[derive(Eq, PartialEq)]
-        enum Over { Zero, One(Id), TwoOrMore };
-
-        // Stores the index of pieces that we're placed above
-        let mut over = Over::Zero;
         let mut z: Option<i32> = None;
 
         // Iterate over every point in the piece, checking its Z level
-        // and storing whether it overlaps with at least two other pieces
         for &(px, py) in &p.pts {
             let c = self.at(x + px, y + py);
 
@@ -110,20 +104,29 @@ impl Board {
                 None => z = Some(c.z),
                 Some(z_) => if z_ != c.z { return -1 }
             }
-
-            // Count the number of pieces that we've placed over
-            match over {
-                Over::Zero => if c.id != Id(0xFF) { over = Over::One(c.id) }
-                Over::One(id) => if c.id != id { over = Over::TwoOrMore }
-                Over::TwoOrMore => ()
-            }
         }
         let z = z.unwrap() + 1;
 
-        // If we're placing this piece off of ground level, it must be
+        // Stores the index of pieces that we're placed above
+        #[derive(Eq, PartialEq)]
+        enum Over { Zero, One(Id), TwoOrMore };
+        let mut over = Over::Zero;
+
+        // Count the number of pieces that we've placed over:
+        // if we're placing this piece off of ground level, it must be
         // positioned over at least two other pieces
-        if z > 0 && over != Over::TwoOrMore {
-            return -1;
+        if z > 0 {
+            for &(px, py) in &p.pts {
+                let c = self.at(x + px, y + py);
+                match over {
+                    Over::Zero => if c.id != Id(0xFF) { over = Over::One(c.id) }
+                    Over::One(id) => if c.id != id { over = Over::TwoOrMore }
+                    Over::TwoOrMore => ()
+                }
+            }
+            if over != Over::TwoOrMore {
+                return -1;
+            }
         }
 
         // If this is the first piece on a new layer, then we don't
