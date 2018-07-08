@@ -142,60 +142,12 @@ impl State {
         out.d[i.0] = STATUS_DISCARDED;
         out
     }
-
-    // Estimates the highest possible score that can be reached
-    // from this game state.
-    pub fn upper_bound_score(&self) -> usize {
-        let mut max_z: i32 = -1;
-        let mut free_tiles = PIECE_COUNT as i32;
-        let mut score = self.score();
-
-        // Count up available tiles and the highest Z position
-        for i in self.placed() {
-            max_z = max(self.z(i), max_z);
-            free_tiles -= 1;
-        }
-        // Then do a best-case estimate assigning free tiles
-        // to an optimistically high level.
-        for i in self.unplaced().rev() {
-            let this_tile_score = i.0 >> 1;
-            let this_tile_level = max_z + ((free_tiles + 1) >> 1);
-            score += this_tile_score * (this_tile_level as usize);
-            free_tiles -= 1;
-        }
-        score
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use state::State;
     use piece::{Id, Piece, Pieces};
-
-    #[test]
-    fn upper_bound_score() {
-        let g = State::new();
-        {
-            let tot: usize = (0..10).map(|x| { x * x }).sum();
-            let tot = tot * 2;
-            assert_eq!(g.upper_bound_score(), tot);
-        }
-        // Place the first 0
-        let g = g.place(&Piece::from_id(Id(0)), 0, 0, 0);
-        let tot = 1 + 2 * (1 + 2) + 3 * (2 + 3) + 4 * (3 + 4) + 5 * (4 + 5)
-                 + 6 * (5 + 6) + 7 * (6 + 7) + 8 * (7 + 8) + 9 * (8 + 9) + 10 * 9;
-        assert_eq!(g.upper_bound_score(), tot);
-
-        // Place the second 0
-        let g = g.place(&Piece::from_id(Id(1)), 0, 0, 0);
-        assert_eq!(g.upper_bound_score(), 570);
-
-        // Place the first 1 on level 0
-        let g = g.place(&Piece::from_id(Id(2)), 0, 0, 0);
-        let tot = 1 * (1 + 2) + 2 * (2 + 3) + 3 * (3 + 4) + 4 * (4 + 5)
-                 + 5 * (5 + 6) + 6 * (6 + 7) + 7 * (7 + 8) + 8 * (8 + 9) + 9 * 9;
-        assert_eq!(g.upper_bound_score(), tot);
-    }
 
     #[test]
     fn score() {

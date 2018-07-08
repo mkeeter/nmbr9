@@ -26,14 +26,6 @@ impl Worker {
         }
     }
 
-    fn print_state(&self, state: &State) {
-        println!("------------------------------------------------------------");
-        for layer in 0..state.layers() + 1 {
-            Board::from_state(&state.layer(layer as u8), &self.pieces).print();
-            print!("\n");
-        }
-    }
-
     fn run(&mut self, state: &State, results: &Results) {
         if self.seen.contains(&state)
         {
@@ -109,41 +101,85 @@ impl Results {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// A swapper produces every bitfield that shares the same number of placed
+// tiles as the input bitfield, since there are two copies of each tile.
+struct Swapper(usize);
+
+impl Iterator for Swapper {
+    type Item = usize;
+    fn next(&mut self) -> Option<usize> {
+        let mut carry = true;
+        let mut out = 0;
+        for i in 0..(PIECE_COUNT >> 1) {
+            // Mask off a two-bit section
+            let mut b = (self.0 >> (2 * i)) & 0x3;
+
+            // Do the logic for a half-adder
+            if carry {
+                if b == 0x1 {
+                    b = 0x2;
+                    carry = false;
+                } else if b == 0x2 {
+                    b = 0x1;
+                    carry = true;
+                }
+            }
+            out |= b << (2 * i);
+        }
+        self.0 = out;
+        if carry { None } else { Some(out) }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 fn main() {
     let mut todo: Vec<usize> = (0..(1<<PIECE_COUNT)).collect();
     todo.sort_by(|a, b| a.count_ones().cmp(&b.count_ones()));
 
     let mut results = Results::new();
 
-    let mut done = 0;
     let mut global_best = 0;
     let count = todo.len();
-    for t in todo {
+    for (done, t) in todo.iter().enumerate() {
+        // We spread symmetric results across every possible
+        // bitfield, so this one could be finished before we get
+        // to it.
+        if results.scores[*t] != -1 {
+            continue;
+        }
+
         let mut state = State::new();
         for i in 0..PIECE_COUNT {
             if t & (1 << i) == 0 {
                 state = state.discard(Id(i));
             } else {
-                results.deltas[t] += (i >> 1) as i32;
+                results.deltas[*t] += (i >> 1) as i32;
             }
         }
 
         let mut worker = Worker::new();
         worker.run(&state, &results);
-        results.scores[t] = worker.best_score;
+        results.scores[*t] = worker.best_score;
+
+        // Apply these results to every symmetric set of pieces
+        for u in Swapper(*t) {
+            results.scores[u] = results.scores[*t];
+            results.deltas[u] = results.deltas[*t];
+        }
 
         if worker.best_score > global_best {
             println!("------------------------------------------------------------");
-            println!("Got new global best");
+            println!("Got new global best: {}", worker.best_score);
             for layer in 0..worker.best_state.layers() + 1 {
                 Board::from_state(&worker.best_state.layer(layer as u8),
                                   &worker.pieces).print();
                 print!("\n");
                 global_best = worker.best_score;
             }
+            println!("------------------------------------------------------------");
         }
 
-        done += 1;
         println!("{} / {} ({}%)", done, count, 100f32 * done as f32 / count as f32);
     }
 }
@@ -153,6 +189,7 @@ mod tests {
     use piece::{Pieces, Piece, Id};
     use state::State;
     use board::Board;
+    use Swapper;
 
     #[test]
     fn gameplay() {
@@ -186,5 +223,24 @@ mod tests {
 
         let s = s.place(&one, 2, 0, 1);
         assert_eq!(s.score(), 1);
+    }
+
+    #[test]
+    fn swapper() {
+        let mut s = Swapper(1);
+        assert_eq!(s.next(), Some(2));
+        assert_eq!(s.next(), None);
+
+        let mut s = Swapper(2);
+        assert_eq!(s.next(), None);
+
+        let mut s = Swapper(3);
+        assert_eq!(s.next(), None);
+
+        let mut s = Swapper(5);
+        assert_eq!(s.next(), Some(6));
+        assert_eq!(s.next(), Some(9));
+        assert_eq!(s.next(), Some(10));
+        assert_eq!(s.next(), None);
     }
 }
