@@ -2,7 +2,7 @@ use std::cmp::{min, max};
 
 use piece::{Piece, Pieces, Id};
 
-const PIECE_COUNT: usize = 20;
+pub const PIECE_COUNT: usize = 20;
 
 // This is a compact representation of placed pieces
 //
@@ -126,6 +126,21 @@ impl State {
         (0..PIECE_COUNT)
             .map(|i| Id(i))
             .filter(move |i| self.status(*i) == Status::Unplaced)
+    }
+
+    pub fn unplaced_bitfield(&self) -> usize {
+        let mut out = 0;
+        for i in self.unplaced() {
+            out |= 1 << i.0;
+        }
+        return out;
+    }
+
+    pub fn discard(&self, i: Id) -> State {
+        debug_assert!(self.status(i) == Status::Unplaced);
+        let mut out = self.clone();
+        out.d[i.0] = STATUS_DISCARDED;
+        out
     }
 
     // Estimates the highest possible score that can be reached

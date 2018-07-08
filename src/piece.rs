@@ -1,5 +1,7 @@
 use std::cmp::{max, min};
 
+use state::PIECE_COUNT;
+
 static PIECE_STRS: &'static [&'static str] = &[
 /* 0 */ "
 ###
@@ -152,7 +154,7 @@ pub struct Id(pub usize);
 ////////////////////////////////////////////////////////////////////////////////
 
 pub struct Pieces {
-    data: [[Piece; 4]; 20],
+    data: [[Piece; 4]; PIECE_COUNT],
 }
 
 impl Pieces {

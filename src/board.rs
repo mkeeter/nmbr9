@@ -24,17 +24,11 @@ impl Board {
         let (w, h) = state.size(pieces);
         let n = (w * h) as usize;
         let mut out = Board {
-            grid: Vec::with_capacity(n),
+            grid: vec![Cell { id: Id(0xFF), z: -1 }; n],
             w: w,
             h: h,
             z: -1,
         };
-
-        // Fill the grid with the background cell
-        let bg = out.at(-1, -1);
-        for _ in 0..n {
-            out.grid.push(bg);
-        }
 
         for i in state.placed() {
             let x = state.x[i.0] as i32;
