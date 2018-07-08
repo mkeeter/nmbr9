@@ -1,6 +1,6 @@
 use std::cmp::{min, max};
 
-use piece::Id;
+use piece::Piece;
 
 const PIECE_COUNT: usize = 20;
 
@@ -24,11 +24,11 @@ impl Moves {
         }
     }
 
-    pub fn place(&self, id: Id, x: i32, y: i32, rot: u8, z: u8) -> Moves {
+    pub fn place(&self, piece: &Piece, x: i32, y: i32, z: u8) -> Moves {
         // Clone the existing state, and assert that this piece hasn't
         // already been placed.
         let mut out = self.clone();
-        debug_assert!(out.z[id.0] == 0xFF);
+        debug_assert!(out.z[piece.id.0] == 0xFF);
 
         // Shift the entire game board to put the lowest piece at 0,0
         for px in &mut out.x {
@@ -37,9 +37,9 @@ impl Moves {
         for py in &mut out.y {
             *py = ((*py as i32) - min(y, 0)) as u8;
         }
-        out.x[id.0] = max(x, 0) as u8;
-        out.y[id.0] = max(y, 0) as u8;
-        out.z[id.0] = (z << 4) | rot;
+        out.x[piece.id.0] = max(x, 0) as u8;
+        out.y[piece.id.0] = max(y, 0) as u8;
+        out.z[piece.id.0] = (z << 4) | piece.rot;
         out
     }
 
@@ -78,7 +78,7 @@ impl Moves {
 #[cfg(test)]
 mod tests {
     use moves::Moves;
-    use piece::Id;
+    use piece::{Id, Piece};
 
     #[test]
     fn upper_bound_score() {
@@ -89,17 +89,17 @@ mod tests {
             assert_eq!(g.upper_bound_score(), tot);
         }
         // Place the first 0
-        let g = g.place(Id(0), 0, 0, 0, 0);
+        let g = g.place(&Piece::from_id(Id(0)), 0, 0, 0);
         let tot = 1 + 2 * (1 + 2) + 3 * (2 + 3) + 4 * (3 + 4) + 5 * (4 + 5)
                  + 6 * (5 + 6) + 7 * (6 + 7) + 8 * (7 + 8) + 9 * (8 + 9) + 10 * 9;
         assert_eq!(g.upper_bound_score(), tot);
 
         // Place the second 0
-        let g = g.place(Id(1), 0, 0, 0, 0);
+        let g = g.place(&Piece::from_id(Id(1)), 0, 0, 0);
         assert_eq!(g.upper_bound_score(), 570);
 
         // Place the first 1 on level 0
-        let g = g.place(Id(2), 0, 0, 0, 0);
+        let g = g.place(&Piece::from_id(Id(2)), 0, 0, 0);
         let tot = 1 * (1 + 2) + 2 * (2 + 3) + 3 * (3 + 4) + 4 * (4 + 5)
                  + 5 * (5 + 6) + 6 * (6 + 7) + 7 * (7 + 8) + 8 * (8 + 9) + 9 * 9;
         assert_eq!(g.upper_bound_score(), tot);
@@ -109,10 +109,10 @@ mod tests {
         let g = Moves::new();
         assert_eq!(g.score(), 0);
 
-        let g = g.place(Id(2), 0, 0, 0, 1);
+        let g = g.place(&Piece::from_id(Id(2)), 0, 0, 1);
         assert_eq!(g.score(), 1);
 
-        let g = g.place(Id(3), 0, 0, 0, 2);
+        let g = g.place(&Piece::from_id(Id(3)), 0, 0, 2);
         assert_eq!(g.score(), 3);
     }
 }

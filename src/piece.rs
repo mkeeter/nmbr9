@@ -58,15 +58,17 @@ pub struct Piece {
     pub neighbors: Vec<(i32, i32)>,
     pub w: i32,
     pub h: i32,
-    pub score: i32,
+    pub id: Id,
+    pub rot: u8,
 }
 
 impl Piece {
     fn new() -> Piece {
-        Piece { pts: Vec::new(), neighbors: Vec::new(), w: 0, h: 0, score: -1}
+        Piece { pts: Vec::new(), neighbors: Vec::new(),
+                w: 0, h: 0, id: Id(0xFF), rot: 0 }
     }
-    fn from_index(i: usize) -> Piece {
-        Piece { score: i as i32, .. Piece::from_string(PIECE_STRS[i]) }
+    pub fn from_id(id: Id) -> Piece {
+        Piece { id: id, .. Piece::from_string(PIECE_STRS[id.0 >> 1]) }
     }
     fn from_string(s: &str) -> Piece {
         let mut out = Piece::new();
@@ -111,7 +113,7 @@ impl Piece {
 
     fn rot(&self) -> Piece {
         let mut out = Piece {
-            w: self.h, h: self.w, score: self.score,
+            w: self.h, h: self.w, id: self.id, rot: self.rot + 1,
             .. Piece::new() };
 
         let mut xmin = 0;
@@ -150,27 +152,37 @@ pub struct Id(pub usize);
 ////////////////////////////////////////////////////////////////////////////////
 
 pub struct Pieces {
-    data: [[Piece; 4]; 10],
+    data: [[Piece; 4]; 20],
 }
 
 impl Pieces {
     pub fn new() -> Pieces {
         Pieces { data: [
-            Piece::from_index(0).rots(),
-            Piece::from_index(1).rots(),
-            Piece::from_index(2).rots(),
-            Piece::from_index(3).rots(),
-            Piece::from_index(4).rots(),
-            Piece::from_index(5).rots(),
-            Piece::from_index(6).rots(),
-            Piece::from_index(7).rots(),
-            Piece::from_index(8).rots(),
-            Piece::from_index(9).rots(),
+            Piece::from_id(Id(0)).rots(),
+            Piece::from_id(Id(1)).rots(),
+            Piece::from_id(Id(2)).rots(),
+            Piece::from_id(Id(3)).rots(),
+            Piece::from_id(Id(4)).rots(),
+            Piece::from_id(Id(5)).rots(),
+            Piece::from_id(Id(6)).rots(),
+            Piece::from_id(Id(7)).rots(),
+            Piece::from_id(Id(8)).rots(),
+            Piece::from_id(Id(9)).rots(),
+            Piece::from_id(Id(10)).rots(),
+            Piece::from_id(Id(11)).rots(),
+            Piece::from_id(Id(12)).rots(),
+            Piece::from_id(Id(13)).rots(),
+            Piece::from_id(Id(14)).rots(),
+            Piece::from_id(Id(15)).rots(),
+            Piece::from_id(Id(16)).rots(),
+            Piece::from_id(Id(17)).rots(),
+            Piece::from_id(Id(18)).rots(),
+            Piece::from_id(Id(19)).rots(),
         ]}
     }
 
     pub fn at(&self, i: Id, rot: usize) -> &Piece {
-        &self.data[i.0 >> 1][rot]
+        &self.data[i.0][rot]
     }
 }
 

@@ -97,7 +97,7 @@ impl Board {
         return -1;
     }
 
-    pub fn insert(&self, p: &Piece, id: Id, x: i32, y: i32) -> Board {
+    pub fn insert(&self, p: &Piece, x: i32, y: i32) -> (Board, u8) {
         // Figure out how much we want to shift by
         let xmin = min(x, 0);
         let ymin = min(y, 0);
@@ -111,18 +111,22 @@ impl Board {
         let x = x - xmin;
         let y = y - ymin;
 
+        let mut z = -1;
         for &(px, py) in &p.pts {
             debug_assert!(px >= 0);
             debug_assert!(py >= 0);
 
-            let i = (py + y) * out.w + (px + x);
-            debug_assert!(i >= 0);
-
-            let i = i as usize;
-            out.grid[i].id = id;
+            let i = out.index(px + x, py + y);
+            out.grid[i].id = p.id;
             out.grid[i].z += 1;
+
+            // Make sure that the Z position is consistent
+            debug_assert!(z == -1 || out.grid[i].z == z);
+            z = out.grid[i].z;
         }
-        out
+
+        debug_assert!(z >= 0);
+        (out, z as u8)
     }
 
     pub fn expand(&self, w: i32, h: i32, dx: i32, dy: i32) -> Board {
