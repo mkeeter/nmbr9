@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::collections::HashSet;
 use std::sync::RwLock;
 use std::time::SystemTime;
@@ -180,9 +181,6 @@ fn main() {
         // to it.
         let percent_done = 100f32 * done as f32 / count as f32;
         if results.read().unwrap().scores[*t] != -1 {
-
-            print!("\r{} / {} ({}%) [{}, skipped]                ",
-                   done, count, percent_done, t);
             continue;
         }
 
@@ -191,7 +189,7 @@ fn main() {
             println!("\n============================================================");
             println!("Completed all {}-bit patterns in {:?}",
                      max_bits, start_time.elapsed().unwrap());
-            println!("\n============================================================");
+            println!("============================================================");
             max_bits = this_bits;
             start_time = SystemTime::now();
         }
@@ -203,7 +201,20 @@ fn main() {
             }
         }
 
+        let mut best_subscore = 0;
+        for u in todo.iter() {
+            if u.count_ones() >= this_bits {
+                break;
+            }
+            else if *u & *t == *u {
+                let this_subscore = results.read().unwrap().scores[*u];
+                best_subscore = max(best_subscore, this_subscore);
+            }
+        }
+
         let mut worker = Worker::new(&pieces, &results);
+        worker.best_score = best_subscore;
+
         worker.run(&state);
 
         {   // Apply these results to every symmetric set of pieces
@@ -226,8 +237,8 @@ fn main() {
             println!("------------------------------------------------------------");
         }
 
-        print!("\r{} / {} ({}%) [{}]                       ",
-               done, count, percent_done, t);
+        print!("\r{} / {} ({}%) [{}, {}, {}]                       ",
+               done, count, percent_done, t, worker.best_score, best_subscore);
     }
 }
 

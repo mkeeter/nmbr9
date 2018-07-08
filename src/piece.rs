@@ -110,6 +110,7 @@ impl Piece {
                 }
             }
         }
+        println!("Neighbors: {}", out.neighbors.len());
         out
     }
 
