@@ -49,7 +49,7 @@ impl<'a> Worker<'a> {
         let mut todo: Vec<State> = Vec::new();
         let board = Board::from_state(&state, &self.pieces);
 
-        for i in state.unplaced().rev() {
+        for i in state.available().rev() {
             for rot in 0..4 {
                 let p = self.pieces.at(i, rot);
 

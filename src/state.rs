@@ -128,6 +128,12 @@ impl State {
             .filter(move |i| self.status(*i) == Status::Unplaced)
     }
 
+    pub fn available<'a>(&'a self) -> impl DoubleEndedIterator<Item=Id> + 'a {
+        self.unplaced().filter(move |i|
+                    ((i.0 & 1) == 0 ||
+                     self.status(Id(i.0 & !1)) != Status::Unplaced))
+    }
+
     pub fn unplaced_bitfield(&self) -> usize {
         let mut out = 0;
         for i in self.unplaced() {
