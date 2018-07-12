@@ -1,12 +1,15 @@
+extern crate arrayvec;
+
 use std::cmp::max;
 use std::collections::HashSet;
 use std::sync::RwLock;
 use std::time::SystemTime;
 
-mod state;
+//mod state;
 mod piece;
-mod board;
+//mod board;
 
+/*
 use piece::{Pieces, Id};
 use state::{State, PIECE_COUNT};
 use board::Board;
@@ -38,7 +41,7 @@ impl<'a> Worker<'a> {
         self.seen.insert(state.clone());
 
         // This is the largest possible score from the current state
-        let my_max_score = self.results.read().unwrap().max_score(state);
+        //let my_max_score = self.results.read().unwrap().max_score(state);
 
         let score = state.score() as i32;
         if score > self.best_score {
@@ -66,9 +69,11 @@ impl<'a> Worker<'a> {
         }
 
         for next in todo.iter() {
+            /*
             if my_max_score == self.best_score {
                 return;
             }
+            */
 
             let next_max_score = self.results.read().unwrap().max_score(next);
             if next_max_score > self.best_score {
@@ -266,7 +271,7 @@ mod tests {
 
         let zero = Piece::from_id(Id(1));
         assert_eq!(b.check(&zero, 0, 0), -1);
-        assert_eq!(b.check(&zero, 4, 0), -1);
+        assert_eq!(b.check(&zero, 2, 0), -1);
         assert_eq!(b.check(&zero, 3, 0), 0);
 
         let s = s.place(&zero, 3, 0, 0);
@@ -302,3 +307,4 @@ mod tests {
         assert_eq!(s.next(), None);
     }
 }
+*/

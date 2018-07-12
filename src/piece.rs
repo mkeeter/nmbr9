@@ -1,48 +1,106 @@
+use arrayvec::ArrayVec;
+
 use std::cmp::{max, min};
+use std::collections::HashMap;
 
-use state::PIECE_COUNT;
+struct Piece {
+    pub pts: Vec<(i32, i32)>
+}
 
-static PIECE_STRS: &'static [&'static str] = &[
-/* 0 */ "
-###
-# #
-# #
-###",
-/* 1 */ "
-##
- #
- #
- #",
-/* 2 */ "
- ##
- ##
-## 
-###",
-/* 3 */ "
-###
-  #
- ##
-###",
-/* 4 */ "
- ##
- # 
-###
- ##",
-/* 5 */ "
-###
-#  
-###
-###",
-/* 6 */ "
-## 
-#  
-###
-###",
-/* 7 */ "
-###
- # 
-## 
-#  ",
+impl Piece {
+    // Interprets a u16 as a 4x4 bitfield and unpacks it into a Piece
+    fn from_u16(p: u16) -> Piece {
+        let mut out = Piece { pts: Vec::new() };
+        for i in 0..16 {
+            if (p & (1 << i)) != 0 {
+                out.pts.push((i % 4, i / 4));
+            }
+        }
+        return out;
+    }
+
+    // Converts a Piece to a unique packed binary representation
+    fn to_u16(&self) -> u16 {
+        let mut out = 0;
+        for p in self.pts.iter() {
+            debug_assert!(p.0 >= 0);
+            debug_assert!(p.0 <  4);
+            debug_assert!(p.1 >= 0);
+            debug_assert!(p.1 <  4);
+            out |= 1 << (p.0 + p.1 * 4);
+        }
+        return out;
+    }
+
+    // Rotates a Piece by 90° clockwise
+    fn rot(&self) -> Piece {
+        Piece {
+            pts: self.pts.iter().map(|&(x, y)| (y, -x + 3)).collect()
+        }
+    }
+}
+
+const UNIQUE_PIECE_COUNT: usize = 10;
+const MAX_ROTATIONS: usize = 4;
+const MAX_EDGE_LENGTH: usize = 4;
+const OVERLAP_SIZE: usize = 3 * MAX_EDGE_LENGTH;
+
+static PIECES: [u16; UNIQUE_PIECE_COUNT] = [
+0b1110101010101110, // 0
+0b1100010001000100, // 1
+0b0110011011001110, // 2
+0b1110001001101110, // 3
+0b0110010011100110, // 4
+0b1110100011101110, // 5
+0b1100100011101110, // 6
+0b1110010011001000, // 7
+0b0110011011001100, // 8
+0b1110111011001100, // 9
+];
+
+enum Overlap {
+    None,
+    Full,
+    Partial(usize),
+    Neighbor,
+}
+
+struct Boop {
+    // The core 10 pieces, as indices, in their 4 possible rotations
+    pieces: [ArrayVec<[usize; MAX_ROTATIONS]>; UNIQUE_PIECE_COUNT],
+
+    // Bidirectional mapping from packed bitmaps to indices
+    ids: HashMap<u16, usize>,
+    bmps: HashMap<usize, u16>,
+
+    table: Vec<ArrayVec<[[Overlap; OVERLAP_SIZE * OVERLAP_SIZE];
+                          UNIQUE_PIECE_COUNT * MAX_ROTATIONS]>>,
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use piece::Piece;
+
+    #[test]
+    fn construction() {
+        for i in 0..65535 {
+            let p = Piece::from_u16(i);
+            assert_eq!(p.to_u16(), i);
+        }
+    }
+
+    #[test]
+    fn rot() {
+        for i in 0..65535 {
+            let p = Piece::from_u16(i);
+            assert_eq!(p.rot().rot().rot().rot().to_u16(), i);
+        }
+    }
+}
+
+/*
 /* 8 */ "
  ##
  ##
@@ -110,7 +168,6 @@ impl Piece {
                 }
             }
         }
-        println!("Neighbors: {}", out.neighbors.len());
         out
     }
 
@@ -209,3 +266,4 @@ mod tests {
         }
     }
 }
+*/

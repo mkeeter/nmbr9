@@ -3,6 +3,7 @@ use std::cmp::max;
 use piece::{Id, Pieces, Piece};
 use state::State;
 
+const PADDING: i32 = 8;
 ////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Copy, Debug, Clone)]
@@ -22,7 +23,7 @@ pub struct Board {
 impl Board {
     pub fn from_state(state: &State, pieces: &Pieces) -> Board {
         let (w, h) = state.size(pieces);
-        let n = (w * h) as usize;
+        let n = ((w + 2*PADDING) * (h + 2*PADDING)) as usize;
         let mut out = Board {
             grid: vec![Cell { id: Id(0xFF), z: -1 }; n],
             w: w,
@@ -53,11 +54,7 @@ impl Board {
     }
 
     fn at(&self, x: i32, y: i32) -> Cell {
-        if x >= 0 && y >= 0 && x < self.w && y < self.h {
-            self.grid[self.index(x, y)]
-        } else {
-            Cell { id: Id(0xFF), z: -1 }
-        }
+        self.grid[self.index(x, y)]
     }
 
     pub fn print(&self) {
@@ -75,9 +72,11 @@ impl Board {
     }
 
     fn index(&self, x: i32, y: i32) -> usize {
-        debug_assert!(x >= 0);
-        debug_assert!(y >= 0);
-        (y * self.w + x) as usize
+        debug_assert!(x >= -PADDING);
+        debug_assert!(y >= -PADDING);
+        debug_assert!(x < self.w + PADDING);
+        debug_assert!(y < self.h + PADDING);
+        ((y + PADDING) * (self.w + 2*PADDING) + x + PADDING) as usize
     }
 
     // Checks whether a piece can be placed at the given location
