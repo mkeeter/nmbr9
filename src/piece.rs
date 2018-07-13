@@ -48,7 +48,39 @@ impl Piece {
     }
 
     fn check(&self, other: &Piece, dx: i32, dy: i32) -> RawOverlap {
-        unimplemented!();
+        let mut all_over = true;
+        let mut none_over = true;
+        let mut has_neighbor = false;
+        let mut out: u16 = 0;
+
+        for (x, y) in other.pts.iter() {
+            if self.at(x + dx, y + dy) {
+                out |= (1 << (x + y * 4));
+                none_over = false;
+            } else {
+                all_over = false;
+            }
+
+            for &(nx, ny) in [(0, 1), (0, -1), (1, 0), (-1, 0)].iter()
+            {
+                has_neighbor |= self.at(x + dx + nx, y + dy + ny);
+            }
+        }
+
+        if all_over {
+            debug_assert!(!none_over);
+            debug_assert!(out == other.to_u16());
+            return RawOverlap::Full;
+        } else if out != 0 {
+            debug_assert!(!all_over);
+            debug_assert!(!none_over);
+            return RawOverlap::Partial(out);
+        } else if has_neighbor {
+            return RawOverlap::Neighbor;
+        } else {
+            debug_assert!(none_over);
+            return RawOverlap::None;
+        }
     }
 }
 
