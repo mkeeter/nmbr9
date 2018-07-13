@@ -6,7 +6,7 @@ use std::collections::{VecDeque, HashMap};
 const UNIQUE_PIECE_COUNT: usize = 10;
 const MAX_ROTATIONS: usize = 4;
 const MAX_EDGE_LENGTH: i32 = 4;
-const OVERLAP_SIZE: usize = (3 * MAX_EDGE_LENGTH) as usize;
+const OVERLAP_SIZE: usize = (2 * MAX_EDGE_LENGTH + 1) as usize;
 
 static PIECES: [u16; UNIQUE_PIECE_COUNT] = [
 0b1110101010101110, // 0
@@ -23,6 +23,7 @@ static PIECES: [u16; UNIQUE_PIECE_COUNT] = [
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[derive(Debug)]
 struct Piece {
     pts: Vec<(i32, i32)>,
     bmp: u16,
@@ -34,7 +35,7 @@ impl Piece {
         let mut out = Piece { pts: Vec::new(), bmp: p };
         for i in 0..16 {
             if (p & (1 << i)) != 0 {
-                out.pts.push((i % 4, i / 4));
+                out.pts.push((3 - (i % 4), i / 4));
             }
         }
         return out;
@@ -49,7 +50,7 @@ impl Piece {
             debug_assert!(p.0 <  4);
             debug_assert!(p.1 >= 0);
             debug_assert!(p.1 <  4);
-            bmp |= 1 << (p.0 + p.1 * 4);
+            bmp |= 1 << ((3 - p.0) + p.1 * 4);
         }
         Piece { pts: pts, bmp: bmp }
     }
@@ -58,7 +59,7 @@ impl Piece {
         if x < 0 || y < 0 || x >= 4 || y >= 4 {
             false
         } else {
-            (self.bmp & (1 << (x + y * 4))) != 0
+            (self.bmp & (1 << ((3 - x) + y * 4))) != 0
         }
     }
 
@@ -74,9 +75,12 @@ impl Piece {
         let mut has_neighbor = false;
         let mut out: u16 = 0;
 
+        println!("\nChecking {:16b}:", self.bmp);
         for (x, y) in other.pts.iter() {
+            println!("  {} {}, {} {}", x, y, x + dx, y + dy);
             if self.at(x + dx, y + dy) {
-                out |= (1 << (x + y * 4));
+                println!("  overlap!");
+                out |= 1 << ((3 - x) + y * 4);
                 none_over = false;
             } else {
                 all_over = false;
@@ -106,7 +110,7 @@ impl Piece {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum RawOverlap {
     None,
     Full,
@@ -125,7 +129,7 @@ impl RawOverlap {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 enum Overlap {
     None,
     Full,
@@ -150,26 +154,25 @@ impl Table {
         self.data[Table::index(x, y, rot, piece)]
     }
 
-    fn set(&mut self, x: i32, y: i32, rot: usize, piece: usize, d: Overlap) {
+    fn store(&mut self, x: i32, y: i32, rot: usize, piece: usize, d: Overlap) {
         self.data[Table::index(x, y, rot, piece)] = d;
     }
 
     fn index(x: i32, y: i32, rot: usize, piece: usize) -> usize {
         debug_assert!(piece < UNIQUE_PIECE_COUNT);
         debug_assert!(rot < MAX_ROTATIONS);
-        debug_assert!(x < 2 * MAX_EDGE_LENGTH);
+        debug_assert!(x <= MAX_EDGE_LENGTH);
         debug_assert!(x >= -MAX_EDGE_LENGTH);
-        debug_assert!(y < 2 * MAX_EDGE_LENGTH);
+        debug_assert!(y <= MAX_EDGE_LENGTH);
         debug_assert!(y >= -MAX_EDGE_LENGTH);
 
         let x = (x + MAX_EDGE_LENGTH) as usize;
         let y = (y + MAX_EDGE_LENGTH) as usize;
 
         x + OVERLAP_SIZE *
-            (y + MAX_ROTATIONS *
-                (rot + UNIQUE_PIECE_COUNT * piece))
+            (y + OVERLAP_SIZE *
+                (rot + MAX_ROTATIONS * piece))
     }
-
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -180,18 +183,35 @@ struct Boop {
 
     // Bidirectional mapping from packed bitmaps to indices
     bmps: HashMap<usize, u16>,
+    ids: HashMap<u16, usize>,
 
     tables: Vec<Table>
 }
 
 impl Boop {
+    fn store(&mut self, bmp: u16) -> (usize, bool) {
+        match self.ids.get(&bmp) {
+            None => {
+                let id = self.ids.len();
+                self.ids.insert(bmp, id);
+                self.bmps.insert(id, bmp);
+                return (id, true);
+            },
+            Some(&id) => return (id, false),
+        }
+    }
+
+    fn last_table<'a>(&'a mut self) -> &'a mut Table {
+        self.tables.last_mut().unwrap()
+    }
+
     fn build_tables() -> Boop {
         let mut todo = VecDeque::new();
-        let mut ids = HashMap::new(); // Mapping from bitmaps to indices
 
         let mut out = Boop {
             pieces: [[0; MAX_ROTATIONS]; UNIQUE_PIECE_COUNT],
             bmps: HashMap::new(),
+            ids: HashMap::new(),
             tables: Vec::new(),
         };
 
@@ -200,38 +220,40 @@ impl Boop {
             let mut p = Piece::from_u16(PIECES[i]);
             for r in 0..MAX_ROTATIONS {
                 let b = p.to_u16();
-                let id = ids.len();
-
-                out.pieces[i][r] = id;
-                ids.insert(b, id);
+                out.pieces[i][r] = out.store(b).0;
                 todo.push_back(b);
-
                 p = p.rot();
             }
         }
         debug_assert!(todo.len() == MAX_ROTATIONS * UNIQUE_PIECE_COUNT);
 
+        // Figure out every pieces that we could put onto one of the original
+        // pieces.  In some cases, this produces a new sub-piece, which we add
+        // to the queue to be checked in turn.
         while let Some(t) = todo.pop_front() {
-            println!("Testing {} ({} total)", t, ids.len());
             out.tables.push(Table::new());
-            let mut table = out.tables.last_mut().unwrap();
+            println!("Testing {:16b} ({} total)", t, out.tables.len());
 
             let t = Piece::from_u16(t);
 
             for i in 0..UNIQUE_PIECE_COUNT {
                 let mut p = Piece::from_u16(PIECES[i]);
                 for r in 0..MAX_ROTATIONS {
-                    for x in (-MAX_EDGE_LENGTH)..(2 * MAX_EDGE_LENGTH) {
-                        for y in (-MAX_EDGE_LENGTH)..(2 * MAX_EDGE_LENGTH) {
+                    for x in -MAX_EDGE_LENGTH..=MAX_EDGE_LENGTH {
+                        for y in -MAX_EDGE_LENGTH..=MAX_EDGE_LENGTH {
                             let result = p.check(&t, x, y);
                             if let RawOverlap::Partial(p) = result {
-                                if !ids.contains_key(&p) {
-                                    let i = ids.len();
-                                    ids.insert(p, i);
-                                    todo.push_back(p);
+                                if out.store(p).1 {
+                                    //todo.push_back(p);
                                 }
                             }
-                            table.set(x, y, r, i, result.to_overlap(&ids));
+
+                            // Tag the result with an index for the overlap,
+                            // rather than the raw bitmap
+                            let result = result.to_overlap(&out.ids);
+
+                            // Then, store it in the table
+                            out.last_table().store(x, y, r, i, result);
                         }
                     }
                     p = p.rot();
@@ -246,8 +268,7 @@ impl Boop {
 
 #[cfg(test)]
 mod tests {
-    use piece::Piece;
-    use piece::Boop;
+    use piece::{Piece, Overlap, Boop, RawOverlap, PIECES};
 
     #[test]
     fn construction() {
@@ -266,9 +287,46 @@ mod tests {
     }
 
     #[test]
+    fn check() {
+        let mut zero = Piece::from_u16(PIECES[0]);
+        let mut one = Piece::from_u16(PIECES[1]);
+        assert_eq!(zero.check(&one, 0, 0),
+                   RawOverlap::Partial(0b1100000000000100));
+        assert_eq!(zero.check(&one, 1, 0),
+                   RawOverlap::Full);
+        assert_eq!(zero.check(&one, -1, 0),
+                   RawOverlap::Partial(0b0100010001000100));
+    }
+
+    /*
+    #[test]
     fn boop() {
         let b = Boop::build_tables();
+        assert_eq!(b.tables[0].at(0, 0, 0, 0), Overlap::Full);
+        assert_eq!(b.tables[0].at(3, 0, 0, 0), Overlap::Neighbor);
+        assert_eq!(b.tables[0].at(4, 0, 0, 0), Overlap::None);
+        assert_eq!(b.tables[0].at(-3, 0, 0, 0), Overlap::Neighbor);
+        assert_eq!(b.tables[0].at(-4, 0, 0, 0), Overlap::None);
+        assert_eq!(b.tables[0].at(0, 4, 0, 0), Overlap::Neighbor);
+        assert_eq!(b.tables[0].at(0, -4, 0, 0), Overlap::Neighbor);
+        assert_eq!(b.tables[0].at(0, -3, 0, 0),
+            Overlap::Partial(*b.ids.get(&0b1110000000000000).unwrap()));
+
+        // Overlap a 1 onto a 0 and see that we get the correct pattern out
+        assert_eq!(b.tables[4].at(0, 0, 0, 0),
+            Overlap::Partial(*b.ids.get(&0b0100000000001100).unwrap()));
+
+        // Overlap a 1 onto a 0 and see that we get the correct pattern out
+        println!("LOOKUP");
+        let i = b.tables[4].at(1, 0, 0, 0);
+        if let Overlap::Partial(j) = i {
+            println!("Got j {}", j);
+            println!("Overlap: {:16b}", *b.bmps.get(&j).unwrap());
+        }
+        assert_eq!(i,
+            Overlap::Partial(*b.ids.get(&0b0100010001001100).unwrap()));
     }
+    */
 }
 
 ////////////////////////////////////////////////////////////////////////////////
