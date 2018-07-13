@@ -219,17 +219,10 @@ impl Boop {
             let t = Piece::from_u16(t);
 
             for i in 0..UNIQUE_PIECE_COUNT {
+                let mut p = Piece::from_u16(PIECES[i]);
                 for r in 0..MAX_ROTATIONS {
-                    let p: Piece = {
-                        let mut p = Piece::from_u16(PIECES[i]);
-                        for _ in 0..r { p = p.rot(); }
-                        p
-                    };
-
-                    for x in 0..OVERLAP_SIZE {
-                        for y in 0..OVERLAP_SIZE {
-                            let x = (x as i32) - (MAX_EDGE_LENGTH as i32);
-                            let y = (y as i32) - (MAX_EDGE_LENGTH as i32);
+                    for x in (-MAX_EDGE_LENGTH)..(2 * MAX_EDGE_LENGTH) {
+                        for y in (-MAX_EDGE_LENGTH)..(2 * MAX_EDGE_LENGTH) {
                             let result = p.check(&t, x, y);
                             if let RawOverlap::Partial(p) = result {
                                 if !ids.contains_key(&p) {
@@ -241,6 +234,7 @@ impl Boop {
                             table.set(x, y, r, i, result.to_overlap(&ids));
                         }
                     }
+                    p = p.rot();
                 }
             }
         }
