@@ -1,7 +1,27 @@
-use arrayvec::ArrayVec;
-
 use std::cmp::{max, min};
 use std::collections::{VecDeque, HashMap};
+
+////////////////////////////////////////////////////////////////////////////////
+
+const UNIQUE_PIECE_COUNT: usize = 10;
+const MAX_ROTATIONS: usize = 4;
+const MAX_EDGE_LENGTH: i32 = 4;
+const OVERLAP_SIZE: usize = (3 * MAX_EDGE_LENGTH) as usize;
+
+static PIECES: [u16; UNIQUE_PIECE_COUNT] = [
+0b1110101010101110, // 0
+0b1100010001000100, // 1
+0b0110011011001110, // 2
+0b1110001001101110, // 3
+0b0110010011100110, // 4
+0b1110100011101110, // 5
+0b1100100011101110, // 6
+0b1110010011001000, // 7
+0b0110011011001100, // 8
+0b1110111011001100, // 9
+];
+
+////////////////////////////////////////////////////////////////////////////////
 
 struct Piece {
     pts: Vec<(i32, i32)>,
@@ -47,6 +67,7 @@ impl Piece {
         Piece::from_pts(self.pts.iter().map(|&(x, y)| (y, -x + 3)).collect())
     }
 
+    // Checks for overlap with a second piece offset by some distance
     fn check(&self, other: &Piece, dx: i32, dy: i32) -> RawOverlap {
         let mut all_over = true;
         let mut none_over = true;
@@ -83,23 +104,7 @@ impl Piece {
     }
 }
 
-const UNIQUE_PIECE_COUNT: usize = 10;
-const MAX_ROTATIONS: usize = 4;
-const MAX_EDGE_LENGTH: i32 = 4;
-const OVERLAP_SIZE: usize = (3 * MAX_EDGE_LENGTH) as usize;
-
-static PIECES: [u16; UNIQUE_PIECE_COUNT] = [
-0b1110101010101110, // 0
-0b1100010001000100, // 1
-0b0110011011001110, // 2
-0b1110001001101110, // 3
-0b0110010011100110, // 4
-0b1110100011101110, // 5
-0b1100100011101110, // 6
-0b1110010011001000, // 7
-0b0110011011001100, // 8
-0b1110111011001100, // 9
-];
+////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Copy, Clone)]
 enum RawOverlap {
@@ -127,6 +132,8 @@ enum Overlap {
     Partial(usize),
     Neighbor,
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 struct Table {
     data: [Overlap; OVERLAP_SIZE * OVERLAP_SIZE *
@@ -164,6 +171,8 @@ impl Table {
     }
 
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 struct Boop {
     // The core 10 pieces, as indices, in their 4 possible rotations
@@ -267,6 +276,8 @@ mod tests {
         let b = Boop::build_tables();
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 /*
 /* 8 */ "

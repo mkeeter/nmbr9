@@ -1,5 +1,3 @@
-extern crate arrayvec;
-
 use std::cmp::max;
 use std::collections::HashSet;
 use std::sync::RwLock;
