@@ -35,7 +35,7 @@ impl Piece {
     }
 
     fn at(&self, x: i32, y: i32) -> bool {
-        if x < 0 || y < 0 || x > 4 || y > 4 {
+        if x < 0 || y < 0 || x >= 4 || y >= 4 {
             false
         } else {
             (self.bmp & (1 << (x + y * 4))) != 0
@@ -72,7 +72,6 @@ impl Piece {
             debug_assert!(out == other.to_u16());
             return RawOverlap::Full;
         } else if out != 0 {
-            debug_assert!(!all_over);
             debug_assert!(!none_over);
             return RawOverlap::Partial(out);
         } else if has_neighbor {
@@ -86,8 +85,8 @@ impl Piece {
 
 const UNIQUE_PIECE_COUNT: usize = 10;
 const MAX_ROTATIONS: usize = 4;
-const MAX_EDGE_LENGTH: usize = 4;
-const OVERLAP_SIZE: usize = 3 * MAX_EDGE_LENGTH;
+const MAX_EDGE_LENGTH: i32 = 4;
+const OVERLAP_SIZE: usize = (3 * MAX_EDGE_LENGTH) as usize;
 
 static PIECES: [u16; UNIQUE_PIECE_COUNT] = [
 0b1110101010101110, // 0
@@ -129,6 +128,43 @@ enum Overlap {
     Neighbor,
 }
 
+struct Table {
+    data: [Overlap; OVERLAP_SIZE * OVERLAP_SIZE *
+                    MAX_ROTATIONS * UNIQUE_PIECE_COUNT],
+}
+
+impl Table {
+    fn new() -> Table {
+        Table { data: [Overlap::None; OVERLAP_SIZE * OVERLAP_SIZE *
+                                      MAX_ROTATIONS * UNIQUE_PIECE_COUNT] }
+    }
+
+    fn at(&self, x: i32, y: i32, rot: usize, piece: usize) -> Overlap {
+        self.data[Table::index(x, y, rot, piece)]
+    }
+
+    fn set(&mut self, x: i32, y: i32, rot: usize, piece: usize, d: Overlap) {
+        self.data[Table::index(x, y, rot, piece)] = d;
+    }
+
+    fn index(x: i32, y: i32, rot: usize, piece: usize) -> usize {
+        debug_assert!(piece < UNIQUE_PIECE_COUNT);
+        debug_assert!(rot < MAX_ROTATIONS);
+        debug_assert!(x < 2 * MAX_EDGE_LENGTH);
+        debug_assert!(x >= -MAX_EDGE_LENGTH);
+        debug_assert!(y < 2 * MAX_EDGE_LENGTH);
+        debug_assert!(y >= -MAX_EDGE_LENGTH);
+
+        let x = (x + MAX_EDGE_LENGTH) as usize;
+        let y = (y + MAX_EDGE_LENGTH) as usize;
+
+        x + OVERLAP_SIZE *
+            (y + MAX_ROTATIONS *
+                (rot + UNIQUE_PIECE_COUNT * piece))
+    }
+
+}
+
 struct Boop {
     // The core 10 pieces, as indices, in their 4 possible rotations
     pieces: [[usize; MAX_ROTATIONS]; UNIQUE_PIECE_COUNT],
@@ -136,10 +172,7 @@ struct Boop {
     // Bidirectional mapping from packed bitmaps to indices
     bmps: HashMap<usize, u16>,
 
-    table: Vec<[[[[Overlap; OVERLAP_SIZE]
-                          ; OVERLAP_SIZE]
-                          ; MAX_ROTATIONS]
-                          ; UNIQUE_PIECE_COUNT]>
+    tables: Vec<Table>
 }
 
 impl Boop {
@@ -147,36 +180,48 @@ impl Boop {
         let mut todo = VecDeque::new();
         let mut ids = HashMap::new(); // Mapping from bitmaps to indices
 
-        for p in PIECES.iter() {
-            let mut p = Piece::from_u16(*p);
-            for _ in 0..MAX_ROTATIONS {
+        let mut out = Boop {
+            pieces: [[0; MAX_ROTATIONS]; UNIQUE_PIECE_COUNT],
+            bmps: HashMap::new(),
+            tables: Vec::new(),
+        };
+
+        // Construct the 40 original pieces (10 pieces * 4 rotations)
+        for i in 0..UNIQUE_PIECE_COUNT {
+            let mut p = Piece::from_u16(PIECES[i]);
+            for r in 0..MAX_ROTATIONS {
                 let b = p.to_u16();
-                let i = ids.len();
-                ids.insert(b, i);
+                let id = ids.len();
+
+                out.pieces[i][r] = id;
+                ids.insert(b, id);
                 todo.push_back(b);
+
                 p = p.rot();
             }
         }
         debug_assert!(todo.len() == MAX_ROTATIONS * UNIQUE_PIECE_COUNT);
 
         while let Some(t) = todo.pop_front() {
+            println!("Testing {} ({} total)", t, ids.len());
+            out.tables.push(Table::new());
+            let mut table = out.tables.last_mut().unwrap();
+
             let t = Piece::from_u16(t);
-            for p in 0..UNIQUE_PIECE_COUNT {
+
+            for i in 0..UNIQUE_PIECE_COUNT {
                 for r in 0..MAX_ROTATIONS {
                     let p: Piece = {
-                        let mut p = Piece::from_u16(PIECES[p]);
+                        let mut p = Piece::from_u16(PIECES[i]);
                         for _ in 0..r { p = p.rot(); }
                         p
                     };
 
-                    // Here is the actual table that we're building up
-                    let mut o = [[Overlap::None; OVERLAP_SIZE]; OVERLAP_SIZE];
-
                     for x in 0..OVERLAP_SIZE {
                         for y in 0..OVERLAP_SIZE {
-                            let result = p.check(&t,
-                                (x as i32) - (MAX_EDGE_LENGTH as i32),
-                                (y as i32) - (MAX_EDGE_LENGTH as i32));
+                            let x = (x as i32) - (MAX_EDGE_LENGTH as i32);
+                            let y = (y as i32) - (MAX_EDGE_LENGTH as i32);
+                            let result = p.check(&t, x, y);
                             if let RawOverlap::Partial(p) = result {
                                 if !ids.contains_key(&p) {
                                     let i = ids.len();
@@ -184,14 +229,13 @@ impl Boop {
                                     todo.push_back(p);
                                 }
                             }
-                            o[x][y] = result.to_overlap(&ids);
+                            table.set(x, y, r, i, result.to_overlap(&ids));
                         }
                     }
                 }
             }
         }
-
-        unimplemented!();
+        return out;
     }
 }
 
@@ -200,6 +244,7 @@ impl Boop {
 #[cfg(test)]
 mod tests {
     use piece::Piece;
+    use piece::Boop;
 
     #[test]
     fn construction() {
@@ -215,6 +260,11 @@ mod tests {
             let p = Piece::from_u16(i);
             assert_eq!(p.rot().rot().rot().rot().to_u16(), i);
         }
+    }
+
+    #[test]
+    fn boop() {
+        let b = Boop::build_tables();
     }
 }
 
