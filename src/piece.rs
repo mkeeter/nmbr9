@@ -75,11 +75,8 @@ impl Piece {
         let mut has_neighbor = false;
         let mut out: u16 = 0;
 
-        println!("\nChecking {:16b}:", self.bmp);
         for (x, y) in other.pts.iter() {
-            println!("  {} {}, {} {}", x, y, x + dx, y + dy);
             if self.at(x + dx, y + dy) {
-                println!("  overlap!");
                 out |= 1 << ((3 - x) + y * 4);
                 none_over = false;
             } else {
@@ -244,7 +241,7 @@ impl Boop {
                             let result = p.check(&t, x, y);
                             if let RawOverlap::Partial(p) = result {
                                 if out.store(p).1 {
-                                    //todo.push_back(p);
+                                    todo.push_back(p);
                                 }
                             }
 
@@ -296,9 +293,12 @@ mod tests {
                    RawOverlap::Full);
         assert_eq!(zero.check(&one, -1, 0),
                    RawOverlap::Partial(0b0100010001000100));
+        assert_eq!(zero.check(&one, -1, -1),
+            RawOverlap::Partial(0b0100010001000000));
+        assert_eq!(zero.check(&one, -1, 1),
+            RawOverlap::Partial(0b0000010001000100));
     }
 
-    /*
     #[test]
     fn boop() {
         let b = Boop::build_tables();
@@ -314,19 +314,15 @@ mod tests {
 
         // Overlap a 1 onto a 0 and see that we get the correct pattern out
         assert_eq!(b.tables[4].at(0, 0, 0, 0),
-            Overlap::Partial(*b.ids.get(&0b0100000000001100).unwrap()));
-
-        // Overlap a 1 onto a 0 and see that we get the correct pattern out
-        println!("LOOKUP");
-        let i = b.tables[4].at(1, 0, 0, 0);
-        if let Overlap::Partial(j) = i {
-            println!("Got j {}", j);
-            println!("Overlap: {:16b}", *b.bmps.get(&j).unwrap());
-        }
-        assert_eq!(i,
-            Overlap::Partial(*b.ids.get(&0b0100010001001100).unwrap()));
+            Overlap::Partial(*b.ids.get(&0b1100000000000100).unwrap()));
+        assert_eq!(b.tables[4].at(1, 0, 0, 0), Overlap::Full);
+        assert_eq!(b.tables[4].at(-1, 0, 0, 0),
+            Overlap::Partial(*b.ids.get(&0b0100010001000100).unwrap()));
+        assert_eq!(b.tables[4].at(-1, -1, 0, 0),
+            Overlap::Partial(*b.ids.get(&0b0100010001000000).unwrap()));
+        assert_eq!(b.tables[4].at(-1, 1, 0, 0),
+            Overlap::Partial(*b.ids.get(&0b0000010001000100).unwrap()));
     }
-    */
 }
 
 ////////////////////////////////////////////////////////////////////////////////
