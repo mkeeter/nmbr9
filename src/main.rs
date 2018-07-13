@@ -9,6 +9,10 @@ use std::time::SystemTime;
 mod piece;
 //mod board;
 
+fn main() {
+    println!("Hello, world");
+}
+
 /*
 use piece::{Pieces, Id};
 use state::{State, PIECE_COUNT};
