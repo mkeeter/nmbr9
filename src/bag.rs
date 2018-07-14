@@ -106,4 +106,65 @@ mod tests {
             assert_eq!(b.data[i], 0);
         }
     }
+
+    #[test]
+    fn len() {
+        let b = Bag::from_usize(0);
+        assert_eq!(b.len(), 0);
+
+        let b = Bag::from_usize(1);
+        assert_eq!(b.len(), 1);
+
+        let b = Bag::from_usize(2);
+        assert_eq!(b.len(), 2);
+
+        let b = Bag::from_usize(3);
+        assert_eq!(b.len(), 1);
+    }
+
+    #[test]
+    fn take() {
+        let b = Bag::from_usize(1);
+        let b = b.take(3);
+        assert_eq!(b.len(), 0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn bad_take() /* Hi Twitter! */ {
+        let b = Bag::from_usize(1);
+        let b = b.take(4);
+        assert_eq!(b.len(), 0);
+    }
+
+    #[test]
+    fn iter() {
+        let b = Bag::from_usize(0);
+        let mut i = b.into_iter();
+        assert_eq!(i.next(), None);
+
+        let b = Bag::from_usize(1);
+        let mut i = b.into_iter();
+        assert_eq!(i.next(), Some(0));
+        assert_eq!(i.next(), Some(1));
+        assert_eq!(i.next(), Some(2));
+        assert_eq!(i.next(), Some(3));
+        assert_eq!(i.next(), None);
+
+        let b = Bag::from_usize(2);
+        let mut i = b.into_iter();
+        assert_eq!(i.next(), Some(0));
+        assert_eq!(i.next(), Some(1));
+        assert_eq!(i.next(), Some(2));
+        assert_eq!(i.next(), Some(3));
+        assert_eq!(i.next(), None);
+
+        let b = Bag::from_usize(3);
+        let mut i = b.into_iter();
+        assert_eq!(i.next(), Some(4));
+        assert_eq!(i.next(), Some(5));
+        assert_eq!(i.next(), Some(6));
+        assert_eq!(i.next(), Some(7));
+        assert_eq!(i.next(), None);
+    }
 }
