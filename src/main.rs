@@ -12,15 +12,23 @@ mod bag;
 
 use tables::Tables;
 use bag::Bag;
+use piece::{MAX_EDGE_LENGTH};
 use state::State;
 
-fn run(bag: Bag, state: State) {
+fn check(piece: usize, x: i32, y: i32, state: &State, tables: &Tables) {
+}
+
+fn run(bag: Bag, state: State, tables: &Tables) {
     if bag.is_empty() {
         return;
     }
 
     let size = state.size();
     for b in bag.into_iter() {
+        for x in -MAX_EDGE_LENGTH..=MAX_EDGE_LENGTH {
+            for y in -MAX_EDGE_LENGTH..=MAX_EDGE_LENGTH {
+            }
+        }
 
     }
 }

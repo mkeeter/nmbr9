@@ -2,6 +2,7 @@ use std::collections::{VecDeque, HashMap};
 
 use piece::{UNIQUE_PIECE_COUNT, MAX_ROTATIONS, MAX_EDGE_LENGTH, PIECES};
 use piece::{Piece, Overlap};
+use state::Placed;
 
 const OVERLAP_SIZE: usize = (2 * MAX_EDGE_LENGTH + 1) as usize;
 
@@ -127,6 +128,10 @@ impl Tables {
             }
         }
         return out;
+    }
+
+    fn check(&self, id: usize, x: i32, y: i32, p: &Placed) -> Overlap {
+        self.tables[id].at(x - p.x, y - p.y, p.id / 4, p.id % 4)
     }
 }
 
