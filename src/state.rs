@@ -50,10 +50,22 @@ impl State {
         let mut out = self.clone();
         out.pieces.push(p);
         out.pieces.sort_unstable();
+
+        let xmin = out.pieces.iter().map(|p| p.x).min().unwrap();
+        let ymin = out.pieces.iter().map(|p| p.y).min().unwrap();
+        for p in &mut out.pieces {
+            p.x -= xmin;
+            p.y -= ymin;
+        }
+
         return out;
     }
     pub fn score(&self) -> usize {
         self.pieces.iter().map(|p| { (p.id / MAX_ROTATIONS) * p.z }).sum()
+    }
+    pub fn size(&self) -> (i32, i32) {
+        (self.pieces.iter().map(|p| p.x + 4).max().unwrap_or(0),
+         self.pieces.iter().map(|p| p.y + 4).max().unwrap_or(0))
     }
 }
 
@@ -74,6 +86,16 @@ mod tests {
     }
 
     #[test]
+    fn insert() {
+        let state = State::new()
+            .insert(Placed::new(0, -1, -2, 1));
+        assert_eq!(state.pieces[0], Placed::new(0, 0, 0, 1));
+        let state = state.insert(Placed::new(0, -3, -2, 0));
+        assert_eq!(state.pieces[0], Placed::new(0, 3, 2, 1));
+    }
+
+
+    #[test]
     fn ordering() {
         let state = State::new()
             .insert(Placed::new(0, 0, 0, 0))
@@ -83,6 +105,18 @@ mod tests {
         assert_eq!(state.pieces[0], Placed::new(5, 1, 3, 2));
         let state = state.insert(Placed::new(5, 1, 3, 1));
         assert_eq!(state.pieces[0], Placed::new(5, 1, 3, 2));
+    }
+
+    #[test]
+    fn size() {
+        let state = State::new();
+        assert_eq!(state.size(), (0, 0));
+        let state = state.insert(Placed::new(5, 0, 0, 1));
+        assert_eq!(state.size(), (4, 4));
+        let state = state.insert(Placed::new(5, 2, 1, 1));
+        assert_eq!(state.size(), (6, 5));
+        let state = state.insert(Placed::new(5, -2, 1, 1));
+        assert_eq!(state.size(), (8, 5));
     }
 }
 /*
