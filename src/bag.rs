@@ -28,7 +28,12 @@ impl Bag {
 
     fn take(&self, id: usize) -> Bag {
         let mut out = self.clone();
-        out.data[id / MAX_ROTATIONS] -= 1;
+        let index = id / MAX_ROTATIONS;
+        if out.data[index] == 0 {
+            panic!("Attempted to remove non-existent piece");
+        } else {
+            out.data[index] -= 1;
+        }
         return out;
     }
 }
