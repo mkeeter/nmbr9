@@ -1,9 +1,57 @@
-use std::cmp::{min, max};
+use arrayvec::ArrayVec;
+use std::cmp::Ordering;
 
-use piece::{Piece, Pieces, Id};
+use piece::{UNIQUE_PIECE_COUNT, MAX_ROTATIONS};
 
-pub const PIECE_COUNT: usize = 20;
+////////////////////////////////////////////////////////////////////////////////
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct Placed {
+    pub id: usize,
+    pub x: i32,
+    pub y: i32,
+    pub z: usize,
+}
+
+impl Ord for Placed {
+    fn cmp(&self, other: &Placed) -> Ordering {
+        if self.z != other.z {
+            return other.z.cmp(&self.z);
+        } else {
+            return (self.id, self.x, self.y).cmp(&(other.id, other.x, other.y));
+        }
+    }
+}
+
+impl PartialOrd for Placed {
+    fn partial_cmp(&self, other: &Placed) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Clone)]
+pub struct State {
+    pub pieces: ArrayVec<[Placed; UNIQUE_PIECE_COUNT * 2]>,
+}
+
+impl State {
+    pub fn new() -> State {
+        State { pieces: ArrayVec::new() }
+    }
+    pub fn insert(&self, p: Placed) -> State {
+        let mut out = self.clone();
+        out.pieces.push(p);
+        out.pieces.sort_unstable();
+        return out;
+    }
+    pub fn score(&self) -> usize {
+        self.pieces.iter().map(|p| { (p.id / MAX_ROTATIONS) * p.z }).sum()
+    }
+}
+
+/*
 // This is a compact representation of placed pieces
 //
 // The d field is a packed representation
@@ -174,3 +222,4 @@ mod tests {
     }
 }
 
+*/

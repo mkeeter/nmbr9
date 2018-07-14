@@ -1,11 +1,10 @@
-use std::cmp::{max, min};
 use std::collections::{VecDeque, HashMap};
 
 ////////////////////////////////////////////////////////////////////////////////
 
-const UNIQUE_PIECE_COUNT: usize = 10;
-const MAX_ROTATIONS: usize = 4;
-const MAX_EDGE_LENGTH: i32 = 4;
+pub const UNIQUE_PIECE_COUNT: usize = 10;
+pub const MAX_ROTATIONS: usize = 4;
+pub const MAX_EDGE_LENGTH: i32 = 4;
 const OVERLAP_SIZE: usize = (2 * MAX_EDGE_LENGTH + 1) as usize;
 
 static PIECES: [u16; UNIQUE_PIECE_COUNT] = [
@@ -285,8 +284,8 @@ mod tests {
 
     #[test]
     fn check() {
-        let mut zero = Piece::from_u16(PIECES[0]);
-        let mut one = Piece::from_u16(PIECES[1]);
+        let zero = Piece::from_u16(PIECES[0]);
+        let one = Piece::from_u16(PIECES[1]);
         assert_eq!(zero.check(&one, 0, 0),
                    RawOverlap::Partial(0b1100000000000100));
         assert_eq!(zero.check(&one, 1, 0),

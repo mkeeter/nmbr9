@@ -1,9 +1,11 @@
+extern crate arrayvec;
+
 use std::cmp::max;
 use std::collections::HashSet;
 use std::sync::RwLock;
 use std::time::SystemTime;
 
-//mod state;
+mod state;
 mod piece;
 //mod board;
 
