@@ -5,7 +5,7 @@ use piece::{Piece, Overlap};
 
 const OVERLAP_SIZE: usize = (2 * MAX_EDGE_LENGTH + 1) as usize;
 
-struct Table {
+pub struct Table {
     data: [Overlap; OVERLAP_SIZE * OVERLAP_SIZE *
                     MAX_ROTATIONS * UNIQUE_PIECE_COUNT],
 }
@@ -43,7 +43,7 @@ impl Table {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct Boop {
+pub struct Tables {
     // The core 10 pieces, as indices, in their 4 possible rotations
     pieces: [[usize; MAX_ROTATIONS]; UNIQUE_PIECE_COUNT],
 
@@ -54,7 +54,7 @@ struct Boop {
     tables: Vec<Table>
 }
 
-impl Boop {
+impl Tables {
     fn store(&mut self, bmp: u16) -> (usize, bool) {
         match self.ids.get(&bmp) {
             None => {
@@ -71,10 +71,10 @@ impl Boop {
         self.tables.last_mut().unwrap()
     }
 
-    fn build_tables() -> Boop {
+    fn build_tables() -> Tables {
         let mut todo = VecDeque::new();
 
-        let mut out = Boop {
+        let mut out = Tables {
             pieces: [[0; MAX_ROTATIONS]; UNIQUE_PIECE_COUNT],
             bmps: HashMap::new(),
             ids: HashMap::new(),
@@ -134,44 +134,12 @@ impl Boop {
 
 #[cfg(test)]
 mod tests {
-    use tables::{Boop};
-    use piece::{Piece, Overlap, PIECES};
+    use super::*;
+    use piece::Overlap;
 
     #[test]
-    fn construction() {
-        for i in 0..65535 {
-            let p = Piece::from_u16(i);
-            assert_eq!(Piece::from_pts(p.pts).to_u16(), i);
-        }
-    }
-
-    #[test]
-    fn rot() {
-        for i in 0..65535 {
-            let p = Piece::from_u16(i);
-            assert_eq!(p.rot().rot().rot().rot().to_u16(), i);
-        }
-    }
-
-    #[test]
-    fn check() {
-        let zero = Piece::from_u16(PIECES[0]);
-        let one = Piece::from_u16(PIECES[1]);
-        assert_eq!(zero.check(&one, 0, 0),
-                   Overlap::_Partial(0b1100000000000100));
-        assert_eq!(zero.check(&one, 1, 0),
-                   Overlap::Full);
-        assert_eq!(zero.check(&one, -1, 0),
-                   Overlap::_Partial(0b0100010001000100));
-        assert_eq!(zero.check(&one, -1, -1),
-            Overlap::_Partial(0b0100010001000000));
-        assert_eq!(zero.check(&one, -1, 1),
-            Overlap::_Partial(0b0000010001000100));
-    }
-
-    #[test]
-    fn boop() {
-        let b = Boop::build_tables();
+    fn tables() {
+        let b = Tables::build_tables();
         assert_eq!(b.tables[0].at(0, 0, 0, 0), Overlap::Full);
         assert_eq!(b.tables[0].at(3, 0, 0, 0), Overlap::Neighbor);
         assert_eq!(b.tables[0].at(4, 0, 0, 0), Overlap::None);

@@ -9,13 +9,35 @@ mod state;
 mod piece;
 mod tables;
 mod bag;
-//mod board;
+
+use tables::Tables;
+use bag::Bag;
+use state::State;
+
+fn run(bag: Bag, state: State) {
+    if bag.is_empty() {
+        return;
+    }
+
+    let size = state.size();
+    for b in bag.into_iter() {
+
+    }
+}
 
 fn main() {
     println!("Hello, world");
 }
 
 /*
+struct Worker<'a> {
+    best_score: i32,
+    best_state: State,
+    tables: &'a Tables,
+    results: &'a RwLock<Results>,
+    seen: HashSet<State>,
+}
+
 use piece::{Pieces, Id};
 use state::{State, PIECE_COUNT};
 use board::Board;

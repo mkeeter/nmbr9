@@ -1,7 +1,7 @@
 use piece::{UNIQUE_PIECE_COUNT, MAX_ROTATIONS};
 
 #[derive(Clone)]
-struct Bag {
+pub struct Bag {
     data: [usize; UNIQUE_PIECE_COUNT],
 }
 
@@ -13,7 +13,7 @@ impl Bag {
     // Interprets an integer as a ternary number
     // that tells us how many of each piece we put
     // into the bag.
-    fn from_usize(mut p: usize) -> Bag {
+    pub fn from_usize(mut p: usize) -> Bag {
         let mut out = Bag::new();
         for i in 0..UNIQUE_PIECE_COUNT {
             out.data[i] = p % 3;
@@ -22,11 +22,15 @@ impl Bag {
         return out;
     }
 
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.data.iter().sum()
     }
 
-    fn take(&self, id: usize) -> Bag {
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn take(&self, id: usize) -> Bag {
         let mut out = self.clone();
         let index = id / MAX_ROTATIONS;
         if out.data[index] == 0 {
@@ -49,7 +53,7 @@ impl<'a> IntoIterator for &'a Bag {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct BagIterator<'a> {
+pub struct BagIterator<'a> {
     bag: &'a Bag,
     i: usize,
     r: usize,
