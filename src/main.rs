@@ -7,6 +7,7 @@ use std::time::SystemTime;
 
 mod state;
 mod piece;
+mod tables;
 //mod board;
 
 fn main() {
