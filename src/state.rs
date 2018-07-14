@@ -5,12 +5,18 @@ use piece::{UNIQUE_PIECE_COUNT, MAX_ROTATIONS};
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Placed {
     pub id: usize,
     pub x: i32,
     pub y: i32,
     pub z: usize,
+}
+
+impl Placed {
+    fn new(id: usize, x: i32, y: i32, z: usize) -> Placed {
+        Placed { id: id, x: x, y: y, z: z}
+    }
 }
 
 impl Ord for Placed {
@@ -31,7 +37,7 @@ impl PartialOrd for Placed {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct State {
     pub pieces: ArrayVec<[Placed; UNIQUE_PIECE_COUNT * 2]>,
 }
@@ -51,6 +57,34 @@ impl State {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use state::{Placed, State};
+
+    #[test]
+    fn score() {
+        let state = State::new();
+        let state = state.insert(Placed::new(0, 0, 0, 0));
+        assert_eq!(state.score(), 0);
+
+        let state = state.insert(Placed::new(4, 0, 0, 1));
+        assert_eq!(state.score(), 1);
+    }
+
+    #[test]
+    fn ordering() {
+        let state = State::new()
+            .insert(Placed::new(0, 0, 0, 0))
+            .insert(Placed::new(4, 0, 0, 1));
+        assert_eq!(state.pieces[0], Placed::new(4, 0, 0, 1));
+        let state = state.insert(Placed::new(5, 1, 3, 2));
+        assert_eq!(state.pieces[0], Placed::new(5, 1, 3, 2));
+        let state = state.insert(Placed::new(5, 1, 3, 1));
+        assert_eq!(state.pieces[0], Placed::new(5, 1, 3, 2));
+    }
+}
 /*
 // This is a compact representation of placed pieces
 //

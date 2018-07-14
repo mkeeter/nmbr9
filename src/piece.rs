@@ -109,3 +109,42 @@ pub enum Overlap {
     Partial(usize), // Overlap result encoded as index
     Neighbor,
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use piece::{Piece, Overlap, PIECES};
+
+    #[test]
+    fn construction() {
+        for i in 0..65535 {
+            let p = Piece::from_u16(i);
+            assert_eq!(Piece::from_pts(p.pts).to_u16(), i);
+        }
+    }
+
+    #[test]
+    fn rot() {
+        for i in 0..65535 {
+            let p = Piece::from_u16(i);
+            assert_eq!(p.rot().rot().rot().rot().to_u16(), i);
+        }
+    }
+
+    #[test]
+    fn check() {
+        let zero = Piece::from_u16(PIECES[0]);
+        let one = Piece::from_u16(PIECES[1]);
+        assert_eq!(zero.check(&one, 0, 0),
+                   Overlap::_Partial(0b1100000000000100));
+        assert_eq!(zero.check(&one, 1, 0),
+                   Overlap::Full);
+        assert_eq!(zero.check(&one, -1, 0),
+                   Overlap::_Partial(0b0100010001000100));
+        assert_eq!(zero.check(&one, -1, -1),
+            Overlap::_Partial(0b0100010001000000));
+        assert_eq!(zero.check(&one, -1, 1),
+            Overlap::_Partial(0b0000010001000100));
+    }
+}
