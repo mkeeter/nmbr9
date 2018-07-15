@@ -12,10 +12,60 @@ mod bag;
 
 use tables::Tables;
 use bag::Bag;
-use piece::{MAX_EDGE_LENGTH};
+use piece::{MAX_EDGE_LENGTH, Overlap};
 use state::State;
 
-fn check(piece: usize, x: i32, y: i32, state: &State, tables: &Tables) {
+// piece is a full or partial piece index, which we want to try placing
+// at x, y with the given state and lookup tables.
+fn check(piece: usize, x: i32, y: i32, state: &State, tables: &Tables) -> Option<usize> {
+    // We only allow the first piece to be placed at the origin
+    if state.is_empty() {
+        if x == 0 && y == 0 { return Some(0) } else { return None; }
+    }
+
+    // Here's the Z layer that we start on!
+    let mut current_z = state.pieces.first().map(|p| p.z).unwrap_or(0);
+
+    // Have we seen a neighboring piece on this particular layer?
+    let mut got_neighbor_this_layer = false;
+
+    // Did we see a neighboring piece on the previous layer?
+    // Pieces being placed above the top layer don't need a neighbor,
+    // so we initialize this to true.
+    let mut got_neighbor_prev_layer = true;
+
+    // The piece mutates as parts of it are placed over other pieces
+    let mut remaining_piece = piece;
+
+    for p in state.pieces.iter() {
+        if p.z != current_z {
+            // If some of the piece ended up over pieces on this layer,
+            // then it will be unsupported, so we must return false.
+            if remaining_piece != piece {
+                return None;
+            }
+
+            current_z = p.z;
+            got_neighbor_prev_layer = got_neighbor_this_layer;
+            got_neighbor_this_layer = false;
+            remaining_piece = piece;
+        }
+
+        let r = tables.at(remaining_piece).check(x, y, &p);
+        match r {
+            Overlap::_Partial(_) => panic!("Uncleaned index"),
+            Overlap::None => (),
+            Overlap::Neighbor => got_neighbor_this_layer = true,
+            Overlap::Partial(t) => remaining_piece = t,
+            Overlap::Full =>
+                if (remaining_piece != piece) && (got_neighbor_prev_layer) {
+                    return Some(p.z + 1)
+                } else {
+                    return None;
+                }
+        }
+    }
+    return None;
 }
 
 fn run(bag: Bag, state: State, tables: &Tables) {

@@ -7,7 +7,7 @@ use piece::{UNIQUE_PIECE_COUNT, MAX_ROTATIONS};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Placed {
-    pub id: usize,
+    id: usize,
     pub x: i32,
     pub y: i32,
     pub z: usize,
@@ -16,6 +16,12 @@ pub struct Placed {
 impl Placed {
     fn new(id: usize, x: i32, y: i32, z: usize) -> Placed {
         Placed { id: id, x: x, y: y, z: z}
+    }
+    pub fn rot(&self) -> usize {
+        self.id % MAX_ROTATIONS
+    }
+    pub fn index(&self) -> usize {
+        self.id / MAX_ROTATIONS
     }
 }
 
@@ -66,6 +72,9 @@ impl State {
     pub fn size(&self) -> (i32, i32) {
         (self.pieces.iter().map(|p| p.x + 4).max().unwrap_or(0),
          self.pieces.iter().map(|p| p.y + 4).max().unwrap_or(0))
+    }
+    pub fn is_empty(&self) -> bool {
+        self.pieces.is_empty()
     }
 }
 

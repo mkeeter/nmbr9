@@ -46,6 +46,10 @@ impl Table {
             (y + OVERLAP_SIZE *
                 (rot + MAX_ROTATIONS * piece))
     }
+
+    pub fn check(&self, x: i32, y: i32, p: &Placed) -> Overlap {
+        self.at(x - p.x, y - p.y, p.rot(), p.index())
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -72,6 +76,10 @@ impl Tables {
             },
             Some(&id) => return (id, false),
         }
+    }
+
+    pub fn at(&self, piece: usize) -> &Table {
+        &self.tables[piece]
     }
 
     fn last_table<'a>(&'a mut self) -> &'a mut Table {
@@ -134,10 +142,6 @@ impl Tables {
             }
         }
         return out;
-    }
-
-    fn check(&self, id: usize, x: i32, y: i32, p: &Placed) -> Overlap {
-        self.tables[id].at(x - p.x, y - p.y, p.id / 4, p.id % 4)
     }
 }
 
