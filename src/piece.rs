@@ -71,9 +71,9 @@ impl Piece {
 
         for (x, y) in other.pts.iter() {
             if self.at(x + dx, y + dy) {
-                out |= 1 << ((3 - x) + y * 4);
                 none_over = false;
             } else {
+                out |= 1 << ((3 - x) + y * 4);
                 all_over = false;
             }
 
@@ -87,8 +87,7 @@ impl Piece {
             debug_assert!(!none_over);
             debug_assert!(out == other.to_u16());
             return Overlap::Full;
-        } else if out != 0 {
-            debug_assert!(!none_over);
+        } else if out != other.to_u16() {
             return Overlap::_Partial(out);
         } else if has_neighbor {
             return Overlap::Neighbor;
@@ -137,14 +136,14 @@ mod tests {
         let zero = Piece::from_u16(PIECES[0]);
         let one = Piece::from_u16(PIECES[1]);
         assert_eq!(zero.check(&one, 0, 0),
-                   Overlap::_Partial(0b1100000000000100));
+                   Overlap::_Partial(0b0000010001000000));
         assert_eq!(zero.check(&one, 1, 0),
                    Overlap::Full);
         assert_eq!(zero.check(&one, -1, 0),
-                   Overlap::_Partial(0b0100010001000100));
+                   Overlap::_Partial(0b1000000000000000));
         assert_eq!(zero.check(&one, -1, -1),
-            Overlap::_Partial(0b0100010001000000));
+            Overlap::_Partial(0b1000000000000100));
         assert_eq!(zero.check(&one, -1, 1),
-            Overlap::_Partial(0b0000010001000100));
+            Overlap::_Partial(0b1100000000000000));
     }
 }

@@ -165,17 +165,17 @@ mod tests {
         assert_eq!(b.tables[0].at(0, 4, 0, 0), Overlap::Neighbor);
         assert_eq!(b.tables[0].at(0, -4, 0, 0), Overlap::Neighbor);
         assert_eq!(b.tables[0].at(0, -3, 0, 0),
-            Overlap::Partial(*b.ids.get(&0b1110000000000000).unwrap()));
+            Overlap::Partial(*b.ids.get(&0b0000101010101110).unwrap()));
 
         // Overlap a 1 onto a 0 and see that we get the correct pattern out
         assert_eq!(b.tables[4].at(0, 0, 0, 0),
-            Overlap::Partial(*b.ids.get(&0b1100000000000100).unwrap()));
+            Overlap::Partial(*b.ids.get(&0b0000010001000000).unwrap()));
         assert_eq!(b.tables[4].at(1, 0, 0, 0), Overlap::Full);
         assert_eq!(b.tables[4].at(-1, 0, 0, 0),
-            Overlap::Partial(*b.ids.get(&0b0100010001000100).unwrap()));
+            Overlap::Partial(*b.ids.get(&0b1000000000000000).unwrap()));
         assert_eq!(b.tables[4].at(-1, -1, 0, 0),
-            Overlap::Partial(*b.ids.get(&0b0100010001000000).unwrap()));
+            Overlap::Partial(*b.ids.get(&0b1000000000000100).unwrap()));
         assert_eq!(b.tables[4].at(-1, 1, 0, 0),
-            Overlap::Partial(*b.ids.get(&0b0000010001000100).unwrap()));
+            Overlap::Partial(*b.ids.get(&0b1100000000000000).unwrap()));
     }
 }
