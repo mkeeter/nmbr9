@@ -1,5 +1,8 @@
 extern crate arrayvec;
 
+#[macro_use]
+extern crate lazy_static;
+
 use std::cmp::max;
 use std::collections::HashSet;
 use std::sync::RwLock;

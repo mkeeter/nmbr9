@@ -5,6 +5,9 @@ use piece::{Piece, Overlap};
 use state::Placed;
 
 const OVERLAP_SIZE: usize = (2 * MAX_EDGE_LENGTH + 1) as usize;
+lazy_static! {
+    static ref OVERLAP_TABLES: Tables = { Tables::build() };
+}
 
 pub struct Table {
     data: [Overlap; OVERLAP_SIZE * OVERLAP_SIZE *
@@ -86,7 +89,7 @@ impl Tables {
         self.tables.last_mut().unwrap()
     }
 
-    fn build_tables() -> Tables {
+    fn build() -> Tables {
         let mut todo = VecDeque::new();
 
         let mut out = Tables {
@@ -154,28 +157,27 @@ mod tests {
 
     #[test]
     fn tables() {
-        let b = Tables::build_tables();
-        assert_eq!(b.tables[0].at(0, 0, 0, 0), Overlap::Full);
-        assert_eq!(b.tables[0].at(3, 0, 0, 0), Overlap::Neighbor);
-        assert_eq!(b.tables[0].at(4, 0, 0, 0), Overlap::None);
-        assert_eq!(b.tables[0].at(-3, 0, 0, 0), Overlap::Neighbor);
-        assert_eq!(b.tables[0].at(-4, 0, 0, 0), Overlap::None);
-        assert_eq!(b.tables[0].at(-5, 0, 0, 0), Overlap::None);
-        assert_eq!(b.tables[0].at(5, 0, 0, 0), Overlap::None);
-        assert_eq!(b.tables[0].at(0, 4, 0, 0), Overlap::Neighbor);
-        assert_eq!(b.tables[0].at(0, -4, 0, 0), Overlap::Neighbor);
-        assert_eq!(b.tables[0].at(0, -3, 0, 0),
-            Overlap::Partial(*b.ids.get(&0b0000101010101110).unwrap()));
+        assert_eq!(OVERLAP_TABLES.at(0).at(0, 0, 0, 0), Overlap::Full);
+        assert_eq!(OVERLAP_TABLES.at(0).at(3, 0, 0, 0), Overlap::Neighbor);
+        assert_eq!(OVERLAP_TABLES.at(0).at(4, 0, 0, 0), Overlap::None);
+        assert_eq!(OVERLAP_TABLES.at(0).at(-3, 0, 0, 0), Overlap::Neighbor);
+        assert_eq!(OVERLAP_TABLES.at(0).at(-4, 0, 0, 0), Overlap::None);
+        assert_eq!(OVERLAP_TABLES.at(0).at(-5, 0, 0, 0), Overlap::None);
+        assert_eq!(OVERLAP_TABLES.at(0).at(5, 0, 0, 0), Overlap::None);
+        assert_eq!(OVERLAP_TABLES.at(0).at(0, 4, 0, 0), Overlap::Neighbor);
+        assert_eq!(OVERLAP_TABLES.at(0).at(0, -4, 0, 0), Overlap::Neighbor);
+        assert_eq!(OVERLAP_TABLES.at(0).at(0, -3, 0, 0),
+            Overlap::Partial(*OVERLAP_TABLES.ids.get(&0b0000101010101110).unwrap()));
 
         // Overlap a 1 onto a 0 and see that we get the correct pattern out
-        assert_eq!(b.tables[4].at(0, 0, 0, 0),
-            Overlap::Partial(*b.ids.get(&0b0000010001000000).unwrap()));
-        assert_eq!(b.tables[4].at(1, 0, 0, 0), Overlap::Full);
-        assert_eq!(b.tables[4].at(-1, 0, 0, 0),
-            Overlap::Partial(*b.ids.get(&0b1000000000000000).unwrap()));
-        assert_eq!(b.tables[4].at(-1, -1, 0, 0),
-            Overlap::Partial(*b.ids.get(&0b1000000000000100).unwrap()));
-        assert_eq!(b.tables[4].at(-1, 1, 0, 0),
-            Overlap::Partial(*b.ids.get(&0b1100000000000000).unwrap()));
+        assert_eq!(OVERLAP_TABLES.at(4).at(0, 0, 0, 0),
+            Overlap::Partial(*OVERLAP_TABLES.ids.get(&0b0000010001000000).unwrap()));
+        assert_eq!(OVERLAP_TABLES.at(4).at(1, 0, 0, 0), Overlap::Full);
+        assert_eq!(OVERLAP_TABLES.at(4).at(-1, 0, 0, 0),
+            Overlap::Partial(*OVERLAP_TABLES.ids.get(&0b1000000000000000).unwrap()));
+        assert_eq!(OVERLAP_TABLES.at(4).at(-1, -1, 0, 0),
+            Overlap::Partial(*OVERLAP_TABLES.ids.get(&0b1000000000000100).unwrap()));
+        assert_eq!(OVERLAP_TABLES.at(4).at(-1, 1, 0, 0),
+            Overlap::Partial(*OVERLAP_TABLES.ids.get(&0b1100000000000000).unwrap()));
     }
 }
