@@ -18,7 +18,13 @@ impl Table {
     }
 
     fn at(&self, x: i32, y: i32, rot: usize, piece: usize) -> Overlap {
-        self.data[Table::index(x, y, rot, piece)]
+        if x > MAX_EDGE_LENGTH || x < -MAX_EDGE_LENGTH ||
+           y > MAX_EDGE_LENGTH || y < -MAX_EDGE_LENGTH
+        {
+           Overlap::None
+        } else {
+            self.data[Table::index(x, y, rot, piece)]
+        }
     }
 
     fn store(&mut self, x: i32, y: i32, rot: usize, piece: usize, d: Overlap) {
@@ -150,6 +156,8 @@ mod tests {
         assert_eq!(b.tables[0].at(4, 0, 0, 0), Overlap::None);
         assert_eq!(b.tables[0].at(-3, 0, 0, 0), Overlap::Neighbor);
         assert_eq!(b.tables[0].at(-4, 0, 0, 0), Overlap::None);
+        assert_eq!(b.tables[0].at(-5, 0, 0, 0), Overlap::None);
+        assert_eq!(b.tables[0].at(5, 0, 0, 0), Overlap::None);
         assert_eq!(b.tables[0].at(0, 4, 0, 0), Overlap::Neighbor);
         assert_eq!(b.tables[0].at(0, -4, 0, 0), Overlap::Neighbor);
         assert_eq!(b.tables[0].at(0, -3, 0, 0),
