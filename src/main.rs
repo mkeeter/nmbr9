@@ -16,14 +16,18 @@ mod bag;
 use tables::Tables;
 use bag::Bag;
 use piece::{MAX_EDGE_LENGTH, Overlap};
-use state::State;
+use state::{State, Placed};
 
 // piece is a full or partial piece index, which we want to try placing
 // at x, y with the given state and lookup tables.
-fn check(piece: usize, x: i32, y: i32, state: &State, tables: &Tables) -> Option<usize> {
+fn check(piece: usize, x: i32, y: i32, state: &State, tables: &Tables) -> Option<State> {
     // We only allow the first piece to be placed at the origin
     if state.is_empty() {
-        if x == 0 && y == 0 { return Some(0) } else { return None; }
+        if x == 0 && y == 0 {
+            return Some(state.insert(Placed::new(piece, x, y, 0)));
+        } else {
+            return None;
+        }
     }
 
     // Here's the Z layer that we start on!
@@ -62,13 +66,19 @@ fn check(piece: usize, x: i32, y: i32, state: &State, tables: &Tables) -> Option
             Overlap::Partial(t) => remaining_piece = t,
             Overlap::Full =>
                 if (remaining_piece != piece) && (got_neighbor_prev_layer) {
-                    return Some(p.z + 1)
+                    return Some(state.insert(
+                            Placed::new(piece, x, y, p.z + 1)));
                 } else {
                     return None;
                 }
         }
     }
-    return None;
+    if got_neighbor_this_layer {
+        debug_assert!(current_z == 0);
+        return Some(state.insert(Placed::new(piece, x, y, 0)));
+    } else {
+        return None;
+    }
 }
 
 fn run(bag: Bag, state: State, tables: &Tables) {

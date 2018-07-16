@@ -14,13 +14,15 @@ pub struct Placed {
 }
 
 impl Placed {
-    fn new(id: usize, x: i32, y: i32, z: usize) -> Placed {
+    pub fn new(id: usize, x: i32, y: i32, z: usize) -> Placed {
         Placed { id: id, x: x, y: y, z: z}
     }
     pub fn rot(&self) -> usize {
+        debug_assert!(self.id < UNIQUE_PIECE_COUNT * MAX_ROTATIONS);
         self.id % MAX_ROTATIONS
     }
     pub fn index(&self) -> usize {
+        debug_assert!(self.id < UNIQUE_PIECE_COUNT * MAX_ROTATIONS);
         self.id / MAX_ROTATIONS
     }
 }
