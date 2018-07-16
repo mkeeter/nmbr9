@@ -85,7 +85,7 @@ impl Piece {
 
         if all_over {
             debug_assert!(!none_over);
-            debug_assert!(out == other.to_u16());
+            debug_assert!(out == 0);
             return Overlap::Full;
         } else if out != other.to_u16() {
             return Overlap::_Partial(out);

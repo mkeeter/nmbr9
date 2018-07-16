@@ -19,7 +19,9 @@ use state::{State};
 
 fn run(bag: Bag, state: State) {
     if bag.is_empty() {
-        println!("Got terminal state with score {}", state.score());
+        if state.score() > 0 {
+            println!("Got terminal state with score {}", state.score());
+        }
         return;
     }
 
