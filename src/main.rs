@@ -13,90 +13,38 @@ mod piece;
 mod tables;
 mod bag;
 
-use tables::Tables;
 use bag::Bag;
-use piece::{MAX_EDGE_LENGTH, Overlap};
-use state::{State, Placed};
+use piece::{MAX_EDGE_LENGTH};
+use state::{State};
 
-// piece is a full or partial piece index, which we want to try placing
-// at x, y with the given state and lookup tables.
-fn check(piece: usize, x: i32, y: i32, state: &State, tables: &Tables) -> Option<State> {
-    // We only allow the first piece to be placed at the origin
-    if state.is_empty() {
-        if x == 0 && y == 0 {
-            return Some(state.insert(Placed::new(piece, x, y, 0)));
-        } else {
-            return None;
-        }
-    }
-
-    // Here's the Z layer that we start on!
-    let mut current_z = state.pieces.first().map(|p| p.z).unwrap_or(0);
-
-    // Have we seen a neighboring piece on this particular layer?
-    let mut got_neighbor_this_layer = false;
-
-    // Did we see a neighboring piece on the previous layer?
-    // Pieces being placed above the top layer don't need a neighbor,
-    // so we initialize this to true.
-    let mut got_neighbor_prev_layer = true;
-
-    // The piece mutates as parts of it are placed over other pieces
-    let mut remaining_piece = piece;
-
-    for p in state.pieces.iter() {
-        if p.z != current_z {
-            // If some of the piece ended up over pieces on this layer,
-            // then it will be unsupported, so we must return false.
-            if remaining_piece != piece {
-                return None;
-            }
-
-            current_z = p.z;
-            got_neighbor_prev_layer = got_neighbor_this_layer;
-            got_neighbor_this_layer = false;
-            remaining_piece = piece;
-        }
-
-        let r = tables.at(remaining_piece).check(x, y, &p);
-        match r {
-            Overlap::_Partial(_) => panic!("Uncleaned index"),
-            Overlap::None => (),
-            Overlap::Neighbor => got_neighbor_this_layer = true,
-            Overlap::Partial(t) => remaining_piece = t,
-            Overlap::Full =>
-                if (remaining_piece != piece) && (got_neighbor_prev_layer) {
-                    return Some(state.insert(
-                            Placed::new(piece, x, y, p.z + 1)));
-                } else {
-                    return None;
-                }
-        }
-    }
-    if got_neighbor_this_layer {
-        debug_assert!(current_z == 0);
-        return Some(state.insert(Placed::new(piece, x, y, 0)));
-    } else {
-        return None;
-    }
-}
-
-fn run(bag: Bag, state: State, tables: &Tables) {
+fn run(bag: Bag, state: State) {
     if bag.is_empty() {
+        println!("Got terminal state with score {}", state.score());
         return;
     }
+
+    let mut todo = Vec::new();
 
     let size = state.size();
     for b in bag.into_iter() {
         for x in -MAX_EDGE_LENGTH..=MAX_EDGE_LENGTH {
             for y in -MAX_EDGE_LENGTH..=MAX_EDGE_LENGTH {
+                if let Some(s) = state.try_place(b, x, y) {
+                    todo.push((b, s));
+                }
             }
         }
+    }
 
+    for (p, s) in todo {
+        run(bag.take(p), s);
     }
 }
 
 fn main() {
+    let b = Bag::from_usize(5);
+    let s = State::new();
+    run(b, s);
     println!("Hello, world");
 }
 

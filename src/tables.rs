@@ -6,7 +6,7 @@ use state::Placed;
 
 const OVERLAP_SIZE: usize = (2 * MAX_EDGE_LENGTH + 1) as usize;
 lazy_static! {
-    static ref OVERLAP_TABLES: Tables = { Tables::build() };
+    pub static ref OVERLAP_TABLES: Tables = { Tables::build() };
 }
 
 pub struct Table {
