@@ -1,4 +1,5 @@
 extern crate arrayvec;
+extern crate colored;
 
 #[macro_use]
 extern crate lazy_static;
@@ -29,8 +30,8 @@ fn run(bag: Bag, state: State) {
 
     let size = state.size();
     for b in bag.into_iter() {
-        for x in -MAX_EDGE_LENGTH..=MAX_EDGE_LENGTH {
-            for y in -MAX_EDGE_LENGTH..=MAX_EDGE_LENGTH {
+        for x in -MAX_EDGE_LENGTH..=size.0 + MAX_EDGE_LENGTH {
+            for y in -MAX_EDGE_LENGTH..=size.1 + MAX_EDGE_LENGTH {
                 if let Some(s) = state.try_place(b, x, y) {
                     todo.push((b, s));
                 }

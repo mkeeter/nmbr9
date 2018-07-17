@@ -6,3 +6,4 @@ authors = ["Matt Keeter <matt.j.keeter@gmail.com>"]
 [dependencies]
 arrayvec = "0.4.7"
 lazy_static = "1.0"
+colored = "1.6"

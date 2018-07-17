@@ -17,7 +17,7 @@ pub const PIECES: [u16; UNIQUE_PIECE_COUNT] = [
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Piece {
     pub pts: Vec<(i32, i32)>,
     pub bmp: u16,
@@ -60,6 +60,14 @@ impl Piece {
     // Rotates a Piece by 90° clockwise
     pub fn rot(&self) -> Piece {
         Piece::from_pts(self.pts.iter().map(|&(x, y)| (y, -x + 3)).collect())
+    }
+
+    pub fn rotn(&self, rot: usize) -> Piece {
+        let mut out = self.clone();
+        for _ in 0..rot {
+            out = out.rot();
+        }
+        return out;
     }
 
     // Checks for overlap with a second piece offset by some distance

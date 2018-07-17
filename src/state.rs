@@ -1,7 +1,9 @@
 use arrayvec::ArrayVec;
 use std::cmp::Ordering;
 
-use piece::{UNIQUE_PIECE_COUNT, MAX_ROTATIONS, Overlap};
+use colored::*;
+
+use piece::{UNIQUE_PIECE_COUNT, MAX_ROTATIONS, PIECES, Overlap, Piece};
 use tables::{OVERLAP_TABLES};
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -144,6 +146,20 @@ impl State {
             return Some(self.insert(Placed::new(piece, x, y, 0)));
         } else {
             return None;
+        }
+    }
+
+    pub fn pretty_print(&self) {
+        let (w, h) = self.size();
+        let mut v = vec![0; (w * h) as usize];
+
+        for i in self.pieces.iter().rev() {
+            let p = Piece::from_u16(PIECES[i.index()]).rotn(i.rot());
+            for (px, py) in p.pts {
+                let x = px + i.x;
+                let y = py + i.y;
+                v[(x + y * w) as usize] = i.index();
+            }
         }
     }
 }
