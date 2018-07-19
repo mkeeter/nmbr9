@@ -22,6 +22,7 @@ fn run(bag: Bag, state: State) {
     if bag.is_empty() {
         if state.score() > 0 {
             println!("Got terminal state with score {}", state.score());
+            state.pretty_print();
         }
         return;
     }

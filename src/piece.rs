@@ -1,3 +1,5 @@
+use colored::Color;
+
 pub const UNIQUE_PIECE_COUNT: usize = 10;
 pub const MAX_ROTATIONS: usize = 4;
 pub const MAX_EDGE_LENGTH: i32 = 4;
@@ -13,6 +15,19 @@ pub const PIECES: [u16; UNIQUE_PIECE_COUNT] = [
 0b1110010011001000, // 7
 0b0110011011001100, // 8
 0b1110111011001100, // 9
+];
+
+pub const PIECE_COLORS: [Color; UNIQUE_PIECE_COUNT] = [
+    Color::White,
+    Color::Yellow,
+    Color::BrightRed,
+    Color::BrightYellow,
+    Color::Green,
+    Color::Cyan,
+    Color::Blue,
+    Color::Magenta,
+    Color::BrightMagenta,
+    Color::Red,
 ];
 
 ////////////////////////////////////////////////////////////////////////////////
