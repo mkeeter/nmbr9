@@ -155,6 +155,7 @@ impl State {
         for z in 0..self.pieces.first().map(|p| p.z + 1).unwrap_or(0) {
             let mut v = vec![-1; (w * h) as usize];
 
+            println!("Layer {}:\n", z);
             for i in self.pieces.iter().filter(|&p| p.z == z) {
                 let p = Piece::from_u16(PIECES[i.index()]).rotn(i.rot());
                 for (px, py) in p.pts {
@@ -164,8 +165,8 @@ impl State {
                 }
             }
 
-            for x in 0..w {
-                for y in 0..h {
+            for y in 0..h {
+                for x in 0..w {
                     let i = v[(x + y * w) as usize];
                     if i >= 0 {
                         print!("{}", "  ".on_color(PIECE_COLORS[i as usize]))
@@ -175,6 +176,10 @@ impl State {
                 }
                 print!("\n");
             }
+            for x in 0..w {
+                print!("--");
+            }
+            print!("\n");
         }
     }
 }
