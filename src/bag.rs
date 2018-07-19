@@ -22,6 +22,15 @@ impl Bag {
         return out;
     }
 
+    pub fn as_usize(&self) -> usize {
+        let mut p = 0;
+        for i in (0..UNIQUE_PIECE_COUNT).rev() {
+            p *= 3;
+            p += self.data[i];
+        }
+        return p;
+    }
+
     pub fn len(&self) -> usize {
         self.data.iter().sum()
     }
@@ -175,5 +184,13 @@ mod tests {
         assert_eq!(i.next(), Some(6));
         assert_eq!(i.next(), Some(7));
         assert_eq!(i.next(), None);
+    }
+
+    #[test]
+    fn as_usize() {
+        for i in 0..3_usize.pow(10) {
+            let b = Bag::from_usize(i);
+            assert_eq!(b.as_usize(), i);
+        }
     }
 }
