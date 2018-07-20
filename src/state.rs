@@ -75,7 +75,7 @@ impl State {
     }
 
     pub fn score(&self) -> usize {
-        self.pieces.iter().map(|p| { (p.id / MAX_ROTATIONS) * p.z }).sum()
+        self.pieces.iter().map(|p| { p.index() * p.z }).sum()
     }
 
     pub fn size(&self) -> (i32, i32) {
@@ -85,6 +85,10 @@ impl State {
 
     pub fn is_empty(&self) -> bool {
         self.pieces.is_empty()
+    }
+
+    pub fn layers(&self) -> usize {
+        self.pieces.first().map(|p| p.z).unwrap_or(0)
     }
 
     // Attempts to place a piece at the given position

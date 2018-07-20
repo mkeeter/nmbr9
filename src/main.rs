@@ -15,8 +15,109 @@ mod tables;
 mod bag;
 
 use bag::Bag;
-use piece::{MAX_EDGE_LENGTH};
+use piece::{MAX_EDGE_LENGTH, UNIQUE_PIECE_COUNT};
 use state::{State};
+
+////////////////////////////////////////////////////////////////////////////////
+
+struct Results {
+    // For a particular set of pieces (represented by a 10-digit ternary value),
+    // what is the highest possible score (if we start with the pieces placed
+    // on a flat, empty table)?
+    scores: Vec<(usize, usize)>,
+}
+
+impl Results {
+    fn new() -> Results {
+        Results {
+            scores: vec![(0, 0); 3_usize.pow(UNIQUE_PIECE_COUNT as u32)],
+        }
+    }
+
+    // Returns an upper bound score for a given state, with a certain number
+    // of pieces remaining in the bag to be placed.
+    fn upper_score_bound(&self, bag: &Bag, state: &State) -> usize {
+        let b = bag.as_usize();
+
+        let (available_score, available_delta) = self.scores[b];
+
+        let layers = state.layers();
+        return available_score + (layers + 1) * available_delta;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+struct Worker<'a> {
+    target: usize,
+    best_score: usize,
+    best_state: State,
+    results: &'a RwLock<Results>,
+}
+
+impl<'a> Worker<'a> {
+    fn new(target: usize, results: &'a RwLock<Results>) -> Worker<'a> {
+        Worker {
+            target: target,
+            best_score: 0,
+            best_state: State::new(),
+            results: results,
+        }
+    }
+
+    pub fn run(&mut self) {
+        let bag = Bag::from_usize(self.target);
+        let delta = bag.score();
+        self.run_(bag, State::new());
+
+        let mut writer = self.results.write().unwrap();
+        println!("Recording score {}, {} for {}", self.best_score, delta, self.target);
+        writer.scores[self.target] = (self.best_score, delta);
+    }
+
+    fn run_(&mut self, bag: Bag, state: State) {
+        let score = state.score();
+        if score > self.best_score {
+            println!("Got new best score: {}", state.score());
+            state.pretty_print();
+            self.best_score = score;
+            self.best_state = state.clone();
+        }
+        if bag.is_empty() {
+            return;
+        }
+
+        // Check to see whether we could possibly beat our current
+        // best score; otherwise, return immediately.
+        if bag.as_usize() != self.target {
+            let b = self.results.read().unwrap().upper_score_bound(&bag, &state);
+            if b <= self.best_score {
+                //return;
+            }
+        }
+
+        // Try placing every piece in the bag onto every possible position
+        let mut todo = Vec::new();
+        let size = state.size();
+        for b in bag.into_iter() {
+            for x in -MAX_EDGE_LENGTH..=size.0 + MAX_EDGE_LENGTH {
+                for y in -MAX_EDGE_LENGTH..=size.1 + MAX_EDGE_LENGTH {
+                    if let Some(s) = state.try_place(b, x, y) {
+                        todo.push((b, s));
+                    }
+                }
+            }
+        }
+
+        // Then, recurse and continue running with the placements
+        for (p, s) in todo {
+            self.run_(bag.take(p), s);
+        }
+    }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
 
 fn run(bag: Bag, state: State) {
     if bag.is_empty() {
@@ -46,9 +147,11 @@ fn run(bag: Bag, state: State) {
 }
 
 fn main() {
-    let b = Bag::from_usize(5);
-    let s = State::new();
-    run(b, s);
+    for i in 0..6 {
+        let results = RwLock::new(Results::new());
+        let mut worker = Worker::new(i, &results);
+        worker.run();
+    }
     println!("Hello, world");
 }
 
@@ -136,42 +239,6 @@ impl<'a> Worker<'a> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct Results {
-    // For the set of pieces in a particular configuration,
-    // what is the highest possible score (if we start with
-    // the pieces placed on an empty, flat table)?
-    scores: Vec<i32>,
-
-    // For a particular set of pieces, by how much does the
-    // score increase when we go up by one level?
-    // The score is of the form a*0 + b*1 + c*2 + d*3 + ...
-    // so the delta is simply a + b + c + d
-    deltas: Vec<i32>,
-}
-
-impl Results {
-    fn new() -> Results {
-        Results {
-            scores: vec![-1; 1 << PIECE_COUNT],
-            deltas: vec![ 0; 1 << PIECE_COUNT],
-        }
-    }
-
-    fn max_score(&self, state: &State) -> i32 {
-        let b = state.unplaced_bitfield();
-
-        let available_score = self.scores[b];
-        debug_assert!(available_score != -1);
-
-        let layers = state.layers();
-        debug_assert!(layers != -1);
-
-        let available_delta = self.deltas[b];
-
-        return state.score() as i32 + available_score +
-                        (layers + 1) * available_delta;
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 

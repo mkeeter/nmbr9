@@ -49,6 +49,14 @@ impl Bag {
         }
         return out;
     }
+
+    pub fn score(&self) -> usize {
+        let mut s = 0;
+        for i in (0..UNIQUE_PIECE_COUNT) {
+            s += self.data[i] * i;
+        }
+        return s;
+    }
 }
 
 impl<'a> IntoIterator for &'a Bag {
@@ -192,5 +200,19 @@ mod tests {
             let b = Bag::from_usize(i);
             assert_eq!(b.as_usize(), i);
         }
+    }
+
+    #[test]
+    fn score() {
+        assert_eq!(Bag::from_usize(0).score(), 0);
+        assert_eq!(Bag::from_usize(1).score(), 0);
+        assert_eq!(Bag::from_usize(2).score(), 0);
+        assert_eq!(Bag::from_usize(3).score(), 1);
+        assert_eq!(Bag::from_usize(4).score(), 1);
+        assert_eq!(Bag::from_usize(5).score(), 1);
+        assert_eq!(Bag::from_usize(6).score(), 2);
+        assert_eq!(Bag::from_usize(7).score(), 2);
+        assert_eq!(Bag::from_usize(8).score(), 2);
+        assert_eq!(Bag::from_usize(9).score(), 2);
     }
 }
