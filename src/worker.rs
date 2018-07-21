@@ -25,7 +25,7 @@ impl<'a> Worker<'a> {
     pub fn run(&mut self) {
         let bag = Bag::from_usize(self.target);
         self.best_score = self.results.read().unwrap().upper_subset_score(&bag);
-        println!("Running with {} pieces in the bag and initial best score {}", bag.len(), self.best_score);
+        println!("Running with {} pieces in the bag {:?}, and initial best score {}", bag.len(), bag, self.best_score);
         self.run_(bag, State::new());
 
         println!("Got result {}", self.best_score);

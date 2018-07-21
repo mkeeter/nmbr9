@@ -1,6 +1,6 @@
 use piece::{UNIQUE_PIECE_COUNT, MAX_ROTATIONS};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Bag {
     data: [usize; UNIQUE_PIECE_COUNT],
 }
@@ -106,12 +106,11 @@ pub struct BagIterator<'a> {
 impl<'a> Iterator for BagIterator<'a> {
     type Item = usize;
     fn next(&mut self) -> Option<Self::Item> {
-        while self.bag.data[self.i] == 0
-        {
+        while self.i < UNIQUE_PIECE_COUNT && self.bag.data[self.i] == 0 {
             self.i += 1;
-            if self.i == UNIQUE_PIECE_COUNT {
-                return None;
-            }
+        }
+        if self.i == UNIQUE_PIECE_COUNT {
+            return None;
         }
 
         let out = self.i * MAX_ROTATIONS + self.r;

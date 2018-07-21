@@ -75,7 +75,7 @@ impl State {
     }
 
     pub fn score(&self) -> usize {
-        self.pieces.iter().map(|p| { p.index() * p.z }).sum()
+        self.pieces.iter().map(|p| p.index() * p.z).sum()
     }
 
     pub fn size(&self) -> (i32, i32) {
