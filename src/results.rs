@@ -27,7 +27,6 @@ impl Results {
     pub fn upper_score_bound(&self, bag: &Bag, state: &State) -> usize {
         let layers = state.layers();
         let b = bag.as_usize();
-        let available_delta = self.deltas[b];
 
         let score = if let Some(available_score) = self.scores[b] {
             available_score

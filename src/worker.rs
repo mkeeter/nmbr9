@@ -24,6 +24,7 @@ impl<'a> Worker<'a> {
 
     pub fn run(&mut self) {
         let bag = Bag::from_usize(self.target);
+        println!("Running with {} pieces in the bag", bag.len());
         self.run_(bag, State::new());
 
         let mut writer = self.results.write().unwrap();
@@ -70,5 +71,3 @@ impl<'a> Worker<'a> {
         }
     }
 }
-
-
