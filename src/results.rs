@@ -6,13 +6,19 @@ pub struct Results {
     // For a particular set of pieces (represented by a 10-digit ternary value),
     // what is the highest possible score (if we start with the pieces placed
     // on a flat, empty table)?
-    scores: Vec<(usize, usize)>,
+    scores: Vec<Option<usize>>,
+
+    // For a particular set of pieces, how much does the score go up if we
+    // place them a layer higher?
+    deltas: Vec<usize>
 }
 
 impl Results {
     pub fn new() -> Results {
         Results {
-            scores: vec![(0, 0); 3_usize.pow(UNIQUE_PIECE_COUNT as u32)],
+            scores: vec![None; 3_usize.pow(UNIQUE_PIECE_COUNT as u32)],
+            deltas: (0..3_usize.pow(UNIQUE_PIECE_COUNT as u32)).map(
+                |i| Bag::from_usize(i).score_flat()).collect(),
         }
     }
 
@@ -21,13 +27,16 @@ impl Results {
     pub fn upper_score_bound(&self, bag: &Bag, state: &State) -> usize {
         let b = bag.as_usize();
 
-        let (available_score, available_delta) = self.scores[b];
+        if let Some(available_score) = self.scores[b] {
+            let available_delta = self.deltas[b];
 
-        let layers = state.layers();
-        return available_score + (layers + 1) * available_delta;
+            let layers = state.layers();
+            return available_score + (layers + 1) * available_delta;
+        }
+        return 65535;
     }
 
     pub fn write_score(&mut self, target: usize, score: usize) {
-        self.scores[target] = (score, Bag::from_usize(target).score());
+        self.scores[target] = Some(score);
     }
 }

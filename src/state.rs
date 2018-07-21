@@ -180,7 +180,7 @@ impl State {
                 }
                 print!("\n");
             }
-            for x in 0..w {
+            for _ in 0..w {
                 print!("--");
             }
             print!("\n");

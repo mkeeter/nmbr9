@@ -50,12 +50,30 @@ impl Bag {
         return out;
     }
 
-    pub fn score(&self) -> usize {
+    // Returns the flat score of all the tiles in the bag
+    // (i.e. the sum of their face values)
+    pub fn score_flat(&self) -> usize {
         let mut s = 0;
-        for i in (0..UNIQUE_PIECE_COUNT) {
+        for i in 0..UNIQUE_PIECE_COUNT {
             s += self.data[i] * i;
         }
         return s;
+    }
+
+    // Returns an upper bound on score if the tiles are stacked
+    // This has the conservative assumption that each layer is a mere
+    // two tiles (the minimum to stack onto).
+    pub fn score_stacked(&self) -> usize {
+        let mut remaining = self.len();
+        let mut score = 0;
+        for p in (0..UNIQUE_PIECE_COUNT).rev() {
+            for _ in 0..self.data[p] {
+                score += p * (((remaining + 1) / 2) - 1);
+                remaining -= 1;
+            }
+        }
+        debug_assert!(remaining == 0);
+        return score;
     }
 }
 
@@ -203,16 +221,30 @@ mod tests {
     }
 
     #[test]
-    fn score() {
-        assert_eq!(Bag::from_usize(0).score(), 0);
-        assert_eq!(Bag::from_usize(1).score(), 0);
-        assert_eq!(Bag::from_usize(2).score(), 0);
-        assert_eq!(Bag::from_usize(3).score(), 1);
-        assert_eq!(Bag::from_usize(4).score(), 1);
-        assert_eq!(Bag::from_usize(5).score(), 1);
-        assert_eq!(Bag::from_usize(6).score(), 2);
-        assert_eq!(Bag::from_usize(7).score(), 2);
-        assert_eq!(Bag::from_usize(8).score(), 2);
-        assert_eq!(Bag::from_usize(9).score(), 2);
+    fn score_flat() {
+        assert_eq!(Bag::from_usize(0).score_flat(), 0);
+        assert_eq!(Bag::from_usize(1).score_flat(), 0);
+        assert_eq!(Bag::from_usize(2).score_flat(), 0);
+        assert_eq!(Bag::from_usize(3).score_flat(), 1);
+        assert_eq!(Bag::from_usize(4).score_flat(), 1);
+        assert_eq!(Bag::from_usize(5).score_flat(), 1);
+        assert_eq!(Bag::from_usize(6).score_flat(), 2);
+        assert_eq!(Bag::from_usize(7).score_flat(), 2);
+        assert_eq!(Bag::from_usize(8).score_flat(), 2);
+        assert_eq!(Bag::from_usize(9).score_flat(), 2);
+    }
+
+    #[test]
+    fn score_stacked() {
+        assert_eq!(Bag::from_usize(0).score_stacked(), 0);
+        assert_eq!(Bag::from_usize(1).score_stacked(), 0);
+        assert_eq!(Bag::from_usize(2).score_stacked(), 0);
+        assert_eq!(Bag::from_usize(3).score_stacked(), 0);
+        assert_eq!(Bag::from_usize(4).score_stacked(), 0);
+        assert_eq!(Bag::from_usize(5).score_stacked(), 1);
+        assert_eq!(Bag::from_usize(6).score_stacked(), 0);
+        assert_eq!(Bag::from_usize(7).score_stacked(), 1);
+        assert_eq!(Bag::from_usize(8).score_stacked(), 2);
+        assert_eq!(Bag::from_usize(9).score_stacked(), 0);
     }
 }
