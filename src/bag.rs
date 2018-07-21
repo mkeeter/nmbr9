@@ -50,6 +50,15 @@ impl Bag {
         return out;
     }
 
+    pub fn contains(&self, other: &Bag) -> bool {
+        for i in 0..UNIQUE_PIECE_COUNT {
+            if other.data[i] > self.data[i] {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // Returns the flat score of all the tiles in the bag
     // (i.e. the sum of their face values)
     pub fn score_flat(&self) -> usize {

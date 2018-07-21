@@ -1,3 +1,5 @@
+use std::cmp::max;
+
 use piece::UNIQUE_PIECE_COUNT;
 use bag::Bag;
 use state::State;
@@ -20,6 +22,26 @@ impl Results {
             deltas: (0..3_usize.pow(UNIQUE_PIECE_COUNT as u32)).map(
                 |i| Bag::from_usize(i).score_flat()).collect(),
         }
+    }
+
+    // Returns the highest score found by any subset of the given bag.
+    // This assumes that scores are being populated in lowest-to-highest
+    // order by piece count, and may panic otherwise.
+    //
+    // This makes the overall calculation O(N^2), but is far from
+    // the slowest part of the computation.
+    pub fn upper_subset_score(&self, bag: &Bag) -> usize {
+        let mut out = 0;
+        for i in 0..self.scores.len() {
+            let b = Bag::from_usize(i);
+            if b.len() >= bag.len() {
+                continue;
+            }
+            else if bag.contains(&b) {
+                out = max(out, self.scores[i].unwrap());
+            }
+        }
+        return out;
     }
 
     // Returns an upper bound score for a given state, with a certain number

@@ -22,10 +22,11 @@ fn main() {
     let mut ordered : Vec<usize> = (0..1000).collect();
     ordered.sort_by(|a, b| Bag::from_usize(*a).len().cmp(&Bag::from_usize(*b).len()));
 
+    let results = RwLock::new(Results::new());
+
     for i in ordered {
         println!("======================================================================");
         println!("TESTING {}", i);
-        let results = RwLock::new(Results::new());
         let mut worker = Worker::new(i, &results);
         worker.run();
     }
