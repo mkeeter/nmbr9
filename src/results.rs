@@ -25,15 +25,16 @@ impl Results {
     // Returns an upper bound score for a given state, with a certain number
     // of pieces remaining in the bag to be placed.
     pub fn upper_score_bound(&self, bag: &Bag, state: &State) -> usize {
+        let layers = state.layers();
         let b = bag.as_usize();
+        let available_delta = self.deltas[b];
 
-        if let Some(available_score) = self.scores[b] {
-            let available_delta = self.deltas[b];
-
-            let layers = state.layers();
-            return available_score + (layers + 1) * available_delta;
-        }
-        return 65535;
+        let score = if let Some(available_score) = self.scores[b] {
+            available_score
+        } else {
+            bag.score_stacked()
+        };
+        return score + (layers + 1) * self.deltas[b];
     }
 
     pub fn write_score(&mut self, target: usize, score: usize) {
