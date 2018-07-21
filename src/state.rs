@@ -145,7 +145,7 @@ impl State {
                     }
             }
         }
-        if got_neighbor_this_layer {
+        if got_neighbor_this_layer && remaining_piece == piece {
             debug_assert!(current_z == 0);
             return Some(self.insert(Placed::new(piece, x, y, 0)));
         } else {

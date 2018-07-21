@@ -47,7 +47,7 @@ impl<'a> Worker<'a> {
         if bag.as_usize() != self.target {
             let b = self.results.read().unwrap().upper_score_bound(&bag, &state);
             if b <= self.best_score {
-                //return;
+                return;
             }
         }
 
