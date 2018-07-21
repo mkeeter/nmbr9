@@ -165,7 +165,7 @@ impl State {
                 for (px, py) in p.pts {
                     let x = px + i.x;
                     let y = py + i.y;
-                    v[(x + y * w) as usize] = i.index() as i32;
+                    v[((w - x - 1) + y * w) as usize] = i.index() as i32;
                 }
             }
 
