@@ -7,3 +7,4 @@ authors = ["Matt Keeter <matt.j.keeter@gmail.com>"]
 arrayvec = "0.4.7"
 lazy_static = "1.0"
 colored = "1.6"
+rayon = "1.0.2"

@@ -1,11 +1,13 @@
 extern crate arrayvec;
 extern crate colored;
+extern crate rayon;
 
 #[macro_use]
 extern crate lazy_static;
 
 use std::sync::RwLock;
 use std::time::SystemTime;
+use rayon::prelude::*;
 
 mod bag;
 mod state;
@@ -20,10 +22,12 @@ use worker::Worker;
 use piece::UNIQUE_PIECE_COUNT;
 
 fn run(combos: &[usize], results: &RwLock<Results>) {
-    for i in combos {
-        let mut worker = Worker::new(*i, results);
-        worker.run();
-    }
+    let result: Vec<bool> = combos.par_iter().map(
+        |i| {
+            let mut worker = Worker::new(*i, results);
+            worker.run();
+            true
+        }).collect();
 }
 
 fn main() {
