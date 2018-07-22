@@ -93,13 +93,16 @@ impl State {
 
     // Attempts to place a piece at the given position
     pub fn try_place(&self, piece: usize, x: i32, y: i32) -> Option<State> {
-        // We only allow the first piece to be placed at the origin
+        // We only allow the first piece to be placed at the origin,
+        // and with zero rotation, to reduce degrees of freedom
         if self.is_empty() {
             if x == 0 && y == 0 {
-                return Some(self.insert(Placed::new(piece, x, y, 0)));
-            } else {
-                return None;
+                let p = Placed::new(piece, x, y, 0);
+                if p.rot() == 0 {
+                    return Some(self.insert(p));
+                }
             }
+            return None;
         }
 
         // Here's the Z layer that we start on!

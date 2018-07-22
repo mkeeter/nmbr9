@@ -22,7 +22,7 @@ use worker::Worker;
 use piece::UNIQUE_PIECE_COUNT;
 
 fn run(combos: &[usize], results: &RwLock<Results>) {
-    let result: Vec<bool> = combos.par_iter().map(
+    let _: Vec<bool> = combos.par_iter().map(
         |i| {
             let mut worker = Worker::new(*i, results);
             worker.run();

@@ -37,6 +37,9 @@ impl<'a> Worker<'a> {
     }
 
     fn run_(&mut self, bag: Bag, state: State) {
+        if bag.is_empty() {
+            return;
+        }
         if self.seen.contains(&state) {
             return;
         }
@@ -47,9 +50,6 @@ impl<'a> Worker<'a> {
             state.pretty_print();
             self.best_score = score;
             self.best_state = state.clone();
-        }
-        if bag.is_empty() {
-            return;
         }
 
         // Check to see whether we could possibly beat our current
