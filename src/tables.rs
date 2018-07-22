@@ -116,8 +116,6 @@ impl Tables {
         // to the queue to be checked in turn.
         while let Some(t) = todo.pop_front() {
             out.tables.push(Table::new());
-            println!("Testing {:16b} ({} total)", t, out.tables.len());
-
             let t = Piece::from_u16(t);
 
             for i in 0..UNIQUE_PIECE_COUNT {

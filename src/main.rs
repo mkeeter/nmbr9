@@ -19,29 +19,32 @@ use bag::Bag;
 use worker::Worker;
 use piece::UNIQUE_PIECE_COUNT;
 
+fn run(combos: &[usize], results: &RwLock<Results>) {
+    for i in combos {
+        let mut worker = Worker::new(*i, results);
+        worker.run();
+    }
+}
+
 fn main() {
     let mut ordered : Vec<usize> = (0..3_usize.pow(UNIQUE_PIECE_COUNT as u32)).collect();
     ordered.sort_by(|a, b| Bag::from_usize(*a).len().cmp(&Bag::from_usize(*b).len()));
 
     let results = RwLock::new(Results::new());
-    let start = SystemTime::now();
+    let start_time = SystemTime::now();
 
-    // Print a helpful statement after each new set of pieces is finished
-    let mut max_pieces = 0;
-
-    for i in ordered {
-        println!("======================================================================");
-        println!("TESTING {}", i);
-
-        let pieces = Bag::from_usize(i).len();
-        if pieces > max_pieces {
-            println!("FINISHED ALL {}-PIECE COMBINATIONS in {:?}", max_pieces,
-                     start.elapsed());
-            max_pieces = pieces;
+    let mut start = 0;
+    for num in 0..(2 * UNIQUE_PIECE_COUNT) {
+        let mut end = start;
+        while Bag::from_usize(ordered[end]).len() <= num
+        {
+            end += 1;
         }
 
-        let mut worker = Worker::new(i, &results);
-        worker.run();
+        println!("============================================================");
+        println!("BEGINNING {}-PIECE COMBINATIONS ({} to do)", num, end - start);
+        run(&ordered[start..end], &results);
+        println!("FINISHED {}-piece tests in {:?}", num, start_time.elapsed());
+        start = end;
     }
-    println!("Hello, world");
 }
