@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::RwLock;
 
 use results::Results;
@@ -10,6 +11,7 @@ pub struct Worker<'a> {
     best_score: usize,
     best_state: State,
     results: &'a RwLock<Results>,
+    seen: HashSet<State>,
 }
 
 impl<'a> Worker<'a> {
@@ -19,6 +21,7 @@ impl<'a> Worker<'a> {
             best_score: 0,
             best_state: State::new(),
             results: results,
+            seen: HashSet::new(),
         }
     }
 
@@ -34,6 +37,10 @@ impl<'a> Worker<'a> {
     }
 
     fn run_(&mut self, bag: Bag, state: State) {
+        if self.seen.contains(&state) {
+            return;
+        }
+
         let score = state.score();
         if score > self.best_score {
             println!("Got new best score: {}", state.score());
@@ -66,6 +73,8 @@ impl<'a> Worker<'a> {
                 }
             }
         }
+
+        self.seen.insert(state);
 
         // Then, recurse and continue running with the placements
         for (p, s) in todo {

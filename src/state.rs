@@ -8,7 +8,7 @@ use tables::{OVERLAP_TABLES};
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Placed {
     id: usize,
     pub x: i32,
@@ -48,7 +48,7 @@ impl PartialOrd for Placed {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct State {
     pub pieces: ArrayVec<[Placed; UNIQUE_PIECE_COUNT * 2]>,
 }

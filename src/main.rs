@@ -24,7 +24,7 @@ fn main() {
     ordered.sort_by(|a, b| Bag::from_usize(*a).len().cmp(&Bag::from_usize(*b).len()));
 
     let results = RwLock::new(Results::new());
-    let mut start = SystemTime::now();
+    let start = SystemTime::now();
 
     // Print a helpful statement after each new set of pieces is finished
     let mut max_pieces = 0;
