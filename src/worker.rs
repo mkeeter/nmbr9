@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, BTreeMap};
 use std::sync::RwLock;
 
 use results::Results;
@@ -62,13 +62,18 @@ impl<'a> Worker<'a> {
         }
 
         // Try placing every piece in the bag onto every possible position
-        let mut todo = Vec::new();
+        let mut todo = BTreeMap::new();
         let size = state.size();
         for b in bag.into_iter() {
             for x in -MAX_EDGE_LENGTH..=size.0 + MAX_EDGE_LENGTH {
                 for y in -MAX_EDGE_LENGTH..=size.1 + MAX_EDGE_LENGTH {
                     if let Some(s) = state.try_place(b, x, y) {
-                        todo.push((b, s));
+                        let (w, h) = s.size();
+                        let k = (-(s.score() as i32), w + h);
+                        if !todo.contains_key(&k) {
+                            todo.insert(k, Vec::new());
+                        }
+                        todo.get_mut(&k).unwrap().push((b, s));
                     }
                 }
             }
@@ -77,8 +82,10 @@ impl<'a> Worker<'a> {
         self.seen.insert(state);
 
         // Then, recurse and continue running with the placements
-        for (p, s) in todo {
-            self.run_(bag.take(p), s);
+        for (_, vec) in todo {
+            for (p, s) in vec {
+                self.run_(bag.take(p), s);
+            }
         }
     }
 }
