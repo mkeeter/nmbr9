@@ -17,6 +17,16 @@ pub const PIECES: [u16; UNIQUE_PIECE_COUNT] = [
 0b1110111011001100, // 9
 ];
 
+lazy_static! {
+    pub static ref PIECE_AREA: [u32; UNIQUE_PIECE_COUNT] = {
+        let mut out = [0; UNIQUE_PIECE_COUNT];
+        for (i, p) in PIECES.iter().enumerate() {
+            out[i] = p.count_ones();
+        }
+        return out;
+    };
+}
+
 pub const PIECE_COLORS: [Color; UNIQUE_PIECE_COUNT] = [
     Color::White,
     Color::Yellow,

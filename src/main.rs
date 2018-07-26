@@ -15,8 +15,10 @@ mod piece;
 mod tables;
 mod results;
 mod worker;
+mod stackup;
 
 use results::Results;
+use stackup::Stackup;
 use bag::Bag;
 use worker::Worker;
 use piece::UNIQUE_PIECE_COUNT;
@@ -31,6 +33,9 @@ fn run(combos: &[usize], results: &RwLock<Results>) {
 }
 
 fn main() {
+    let _boop = Stackup::gen();
+    return;
+
     let mut ordered : Vec<usize> = (0..3_usize.pow(UNIQUE_PIECE_COUNT as u32)).collect();
     ordered.sort_by(|a, b| Bag::from_usize(*a).len().cmp(&Bag::from_usize(*b).len()));
 
