@@ -33,24 +33,32 @@ impl fmt::Debug for Layer {
     }
 }
 
-fn choose(a: Layer, n: usize) -> HashSet<Layer> {
+fn choose_(a: Layer, n: usize, seen: &mut HashSet<Layer>) -> HashSet<Layer> {
     let mut out = HashSet::new();
     if n == 0 {
         out.insert(Layer(0));
         return out;
     }
+    else if seen.contains(&a) {
+        return out;
+    }
+    seen.insert(a);
 
     for i in 0..10 {
         let p = (3 as u16).pow(i);
         let rem = (a.0 / p) % 3;
 
         if rem > 0 {
-            for o in choose(Layer(a.0 - p), n - 1) {
+            for o in choose_(Layer(a.0 - p), n - 1, seen) {
                 out.insert(Layer(o.0 + p));
             }
         }
     }
     return out;
+}
+
+fn choose(a: Layer, n: usize) -> HashSet<Layer> {
+    return choose_(a, n, &mut HashSet::new());
 }
 
 /*
@@ -62,7 +70,7 @@ impl Stackup {
         let mut todo = Vec::new();
         todo.push((Layers([Layer(0); 10]), Layer((3 as u16).pow(10) - 1)));
 
-        for i in 0..10 {
+        for i in 0..9 {
             let mut next = Vec::new();
             for (arr, rem) in todo.iter() {
                 for d in choose(*rem, self.0[i]) {
@@ -74,10 +82,18 @@ impl Stackup {
             todo = next;
         }
 
-        todo.iter().map(|(a, _)| a.clone()).collect()
+        // Unpack the final layer of each stackup
+        todo.iter().map(|(a, rem)| {
+            let mut a = a.clone();
+            a.0[9] = *rem;
+            return a; }).collect()
     }
 
     pub fn gen() -> Vec<Stackup> {
+        for c in choose(Layer((3 as u16).pow(10) - 1 - 2), 5) {
+            println!("Got {:?}", c);
+        }
+
         let mut todo = Vec::new();
 
         {   // Construct a starting point, with all tiles at ground level
