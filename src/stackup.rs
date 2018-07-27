@@ -33,33 +33,59 @@ impl fmt::Debug for Layer {
     }
 }
 
-fn choose_(a: Layer, n: usize, seen: &mut HashSet<Layer>) -> HashSet<Layer> {
-    let mut out = HashSet::new();
-    if n == 0 {
-        out.insert(Layer(0));
+impl Layer {
+    fn digit(&self, i: usize) -> u16 {
+        (self.0 / Layer::unit(i)) % 3
+    }
+
+    fn take(&self, i: usize) -> Layer {
+        debug_assert!(self.digit(i) > 0);
+        Layer(self.0 - Layer::unit(i))
+    }
+
+    fn add(&self, i: usize) -> Layer {
+        debug_assert!(self.digit(i) < 2);
+        Layer(self.0 + Layer::unit(i))
+    }
+
+    fn unit(i: usize) -> u16 {
+        (3 as u16).pow(i as u32)
+    }
+
+    fn area(&self) -> u32 {
+        let mut out = 0;
+        for i in 0..10 {
+            out += PIECE_AREA[i] * (self.digit(i) as u32);
+        }
         return out;
     }
-    else if seen.contains(&a) {
-        return out;
-    }
-    seen.insert(a);
 
-    for i in 0..10 {
-        let p = (3 as u16).pow(i);
-        let rem = (a.0 / p) % 3;
+    fn choose_(&self, n: usize, seen: &mut HashSet<Layer>) -> HashSet<Layer> {
+        let mut out = HashSet::new();
+        if n == 0 {
+            out.insert(Layer(0));
+            return out;
+        }
+        else if seen.contains(self) {
+            return out;
+        }
+        seen.insert(self.clone());
 
-        if rem > 0 {
-            for o in choose_(Layer(a.0 - p), n - 1, seen) {
-                out.insert(Layer(o.0 + p));
+        for i in 0..10 {
+            if self.digit(i) > 0 {
+                for o in self.take(i).choose_(n - 1, seen) {
+                    out.insert(o.add(i));
+                }
             }
         }
+        return out;
     }
-    return out;
+
+    pub fn choose(&self, n: usize) -> HashSet<Layer> {
+        return self.choose_(n, &mut HashSet::new());
+    }
 }
 
-fn choose(a: Layer, n: usize) -> HashSet<Layer> {
-    return choose_(a, n, &mut HashSet::new());
-}
 
 /*
  *  Generates all of the valid stackups that use all 20 pieces
@@ -71,9 +97,16 @@ impl Stackup {
         todo.push((Layers([Layer(0); 10]), Layer((3 as u16).pow(10) - 1)));
 
         for i in 0..9 {
+            println!("i: {}", i);
             let mut next = Vec::new();
             for (arr, rem) in todo.iter() {
-                for d in choose(*rem, self.0[i]) {
+
+                println!("   {:?} {:?}", arr, rem);
+                for d in rem.choose(self.0[i]) {
+                    // Discard any stackups that violate the area constraint
+                    if i > 0 && d.area() > arr.0[i - 1].area() {
+                        continue;
+                    }
                     let mut arr = arr.clone();
                     arr.0[i] = d;
                     next.push((arr, Layer(rem.0 - d.0)));
@@ -90,10 +123,6 @@ impl Stackup {
     }
 
     pub fn gen() -> Vec<Stackup> {
-        for c in choose(Layer((3 as u16).pow(10) - 1 - 2), 5) {
-            println!("Got {:?}", c);
-        }
-
         let mut todo = Vec::new();
 
         {   // Construct a starting point, with all tiles at ground level
@@ -153,6 +182,11 @@ impl Stackup {
         for s in &seen {
             println!("Got seen {:?}", s);
         }
-        return seen.into_iter().collect();
+
+        let out: Vec<Stackup> = seen.into_iter().collect();
+        for l in out[0].to_layers() {
+            println!("Got layers {:?}", l);
+        }
+        return out;
     }
 }
