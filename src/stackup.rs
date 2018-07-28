@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::fmt;
 use std::char::from_digit;
+use std::mem::size_of;
 
 use piece::{PIECE_AREA, UNIQUE_PIECE_COUNT};
 
@@ -96,15 +97,18 @@ impl Stackup {
         let mut todo = Vec::new();
         todo.push((Layers([Layer(0); 10]), Layer((3 as u16).pow(10) - 1)));
 
+        println!("Building layers for {:?}", self);
+        let mut discarded = 0;
         for i in 0..9 {
-            println!("i: {}", i);
+            println!("i: {} (got {} todo, {} discarded)", i, todo.len(), discarded);
+            discarded = 0;
             let mut next = Vec::new();
             for (arr, rem) in todo.iter() {
 
-                println!("   {:?} {:?}", arr, rem);
                 for d in rem.choose(self.0[i]) {
                     // Discard any stackups that violate the area constraint
                     if i > 0 && d.area() > arr.0[i - 1].area() {
+                        discarded += 1;
                         continue;
                     }
                     let mut arr = arr.clone();
@@ -115,6 +119,8 @@ impl Stackup {
             todo = next;
         }
 
+        println!("Found {} layer combinations taking {} MB", todo.len(),
+                 todo.len() * size_of::<Layers>() / 1024 / 1024);
         // Unpack the final layer of each stackup
         todo.iter().map(|(a, rem)| {
             let mut a = a.clone();
@@ -184,8 +190,8 @@ impl Stackup {
         }
 
         let out: Vec<Stackup> = seen.into_iter().collect();
-        for l in out[0].to_layers() {
-            println!("Got layers {:?}", l);
+        for i in 0..10 {
+            out[i].to_layers();
         }
         return out;
     }
