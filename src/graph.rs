@@ -154,6 +154,50 @@ impl Layer {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+//  Encodes an X position, Y position, and rotation (4 options) into 2 bytes
+#[derive(Eq, PartialEq, Clone, Copy, Debug, Hash)]
+pub struct Position {
+    _x: u8,
+    _y: u8,
+}
+
+impl Position {
+    fn new(x: i32, y: i32, r: u8) -> Position {
+        debug_assert!(x >= 0 && x < 127);
+        debug_assert!(y >= 0 && y < 127);
+        debug_assert!(r < 4);
+        Position { _x: ((r & 1) << 7) | (x as u8),
+                   _y: ((r & 2) << 6) | (y as u8) }
+    }
+
+    fn empty() -> Position {
+        Position { _x: 0xFF, _y: 0xFF }
+    }
+
+    fn is_empty(&self) -> bool {
+        self._x == 0xFF && self._y == 0xFF
+    }
+
+    fn x(&self) -> i32 { (self._x & 0x7F) as i32 }
+    fn y(&self) -> i32 { (self._y & 0x7F) as i32 }
+    fn r(&self) -> u8 { ((self._x & 0x80) >> 7) | ((self._y & 0x80) >> 6) }
+
+    fn shift(&self, dx: i32, dy: i32) -> Position {
+        Position::new(self.x() + dx, self.y() + dy, self.r())
+    }
+}
+
+#[derive(Eq, PartialEq, Clone, Debug, Copy, Hash)]
+pub struct Placement([Position; 20]);
+
+impl Placement {
+    fn new() -> Placement {
+        Placement([Position::empty(); 20])
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct Graph(HashMap<Layer, Vec<Layer>>);
 
