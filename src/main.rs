@@ -15,13 +15,13 @@ mod piece;
 mod tables;
 mod results;
 mod worker;
-mod stackup;
+mod graph;
 
 use results::Results;
-use stackup::Stackup;
 use bag::Bag;
 use worker::Worker;
 use piece::UNIQUE_PIECE_COUNT;
+use graph::Graph;
 
 fn run(combos: &[usize], results: &RwLock<Results>) {
     let _: Vec<bool> = combos.par_iter().map(
@@ -33,7 +33,7 @@ fn run(combos: &[usize], results: &RwLock<Results>) {
 }
 
 fn main() {
-    let _boop = Stackup::gen();
+    Graph::build();
     return;
 
     let mut ordered : Vec<usize> = (0..3_usize.pow(UNIQUE_PIECE_COUNT as u32)).collect();
