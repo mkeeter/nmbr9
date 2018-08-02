@@ -4,10 +4,12 @@ use std::char::from_digit;
 use std::collections::HashMap;
 use std::time::SystemTime;
 use std::cmp::max;
+use std::sync::RwLock;
 
 use rayon::prelude::*;
+use colored::*;
 
-use piece::{PIECE_AREA, UNIQUE_PIECE_COUNT, Overlap};
+use piece::{Piece, PIECES, PIECE_COLORS, PIECE_AREA, UNIQUE_PIECE_COUNT, Overlap};
 use tables::OVERLAP_TABLES;
 
 lazy_static! {
@@ -86,38 +88,6 @@ impl Pieces {
         Pieces(0)
     }
 
-    fn placements(&self) -> Vec<Placement> {
-        let mut seen = HashSet::new();
-
-        let mut todo = Vec::new();
-        todo.push((Placement::new(), self.clone()));
-
-        // Fully-assembled pieces
-        let mut done = Vec::new();
-
-        while todo.len() > 0 {
-            let mut next = Vec::new();
-            for (placement, remaining) in todo {
-                if seen.contains(&placement) {
-                    continue;
-                }
-
-                if remaining.len() == 0 {
-                    done.push(placement);
-                } else {
-                    // Find which digits still have available pieces
-                    for i in (0..10).filter(|i| { remaining.digit(*i) > 0 }) {
-                        // Try all possible placements here
-                        next.push((placement, remaining.take(i)));
-                    }
-                }
-                seen.insert(placement);
-            }
-            todo = next;
-        }
-
-        return Vec::new();
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -267,6 +237,15 @@ impl Placement {
         debug_assert!(r < 4);
         debug_assert!(i < 10);
 
+        // Special case for the first piece being placed
+        if self.is_empty() {
+            if x == 0 && y == 0 {
+                return Some(self.place(i, x, y, r));
+            } else {
+                return None;
+            }
+        }
+
         let piece = ((i * 4) + r) as usize;
 
         let mut got_neighbor = false;
@@ -276,7 +255,7 @@ impl Placement {
                 Overlap::_Partial(_) => panic!("Uncleaned index"),
                 Overlap::None => (),
                 Overlap::Neighbor => got_neighbor = true,
-                Overlap::Partial(t) => return None,
+                Overlap::Partial(_) => return None,
                 Overlap::Full => return None,
             }
         }
@@ -286,7 +265,40 @@ impl Placement {
         } else {
             return None;
         }
+    }
 
+    pub fn size(&self) -> (i32, i32) {
+        self.0.iter()
+            .filter(|p| !p.is_empty())
+            .fold((0, 0), |(x, y), p| (max(x, p.x() + 4), max(y, p.y() + 4)))
+    }
+
+    pub fn pretty_print(&self) {
+        let (w, h) = self.size();
+
+        let mut v = vec![-1; (w * h) as usize];
+
+        for (i, a) in self.0.iter().enumerate().filter(|(_, a)| !a.is_empty()) {
+            let p = Piece::from_u16(PIECES[i / 2]).rotn(a.r() as usize); // TODO
+            for (px, py) in p.pts {
+                let x = px + a.x();
+                let y = py + a.y();
+                v[(x + y * w) as usize] = (i / 2) as i32;
+            }
+        }
+
+        for y in (0..h).rev() {
+            for x in 0..w {
+                let i = v[(x + y * w) as usize];
+                if i >= 0 {
+                    print!("{}", "  ".on_color(PIECE_COLORS[i as usize]))
+                } else {
+                    print!("  ");
+                }
+            }
+            print!("\n");
+        }
+        print!("\n");
     }
 }
 
@@ -298,6 +310,7 @@ pub struct Graph(HashMap<Layer, Vec<Layer>>);
 impl Graph {
     pub fn build() -> Graph {
 
+        let _beep = possible_placements();
         let _boop = possible_overlaps();
 
         let timer = SystemTime::now();
@@ -325,6 +338,8 @@ impl Graph {
         out
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 fn possible_overlaps() -> Vec<(Pieces, Pieces)> {
     let mut out = Vec::new();
@@ -364,4 +379,66 @@ fn possible_overlaps() -> Vec<(Pieces, Pieces)> {
 
     println!("Got {} possible overlaps of {} pieces", out.len(), pieces.len());
     return out;
+}
+
+fn possible_placements() -> Vec<Placement> {
+    let seen: RwLock<HashMap<Pieces, HashSet<Placement>>> = RwLock::new(HashMap::new());
+
+    let mut todo = Vec::new();
+    todo.push((Placement::new(),
+               Layer { placed: Pieces::empty(), remaining: Pieces::all() }));
+
+    while todo.len() > 0 {
+        let mut next = Vec::new();
+        if todo[0].1.placed.len() >= 2 { break; }
+
+        // Skip all placements that have already been seen
+        let _done: Vec<_> = todo.into_iter()
+            .filter(|(placement, layer)| seen.read()
+                                             .unwrap()
+                                             .get(&layer.placed)
+                                             .map(|h| !h.contains(&placement))
+                                             .unwrap_or(true))
+            .map(|(placement, layer)| {
+                // Insert a brand new HashSet if this is the first time we've
+                // seen this particular set of pieces
+                if !seen.read().unwrap().contains_key(&layer.placed) {
+                    let mut h = HashSet::new();
+                    h.insert(placement);
+                    seen.write().unwrap().insert(layer.placed, h);
+                // Otherwise, add this particular arrangement
+                } else {
+                    let i = seen.write().unwrap().get_mut(&layer.placed)
+                                .unwrap().insert(placement);
+                    debug_assert!(!i);
+                }
+
+                // Iterate over all of the possible pieces, rotations,
+                // and positions, checking to see which placements are valid
+                let size = placement.size();
+                for i in (0..10).filter(|i| { layer.remaining.digit(*i) > 0 }) {
+                    for r in 0..4 {
+                        for x in -4..=size.0 + 4 {
+                            for y in -4..=size.1 + 4 {
+                                if let Some(p) = placement.try_place(i as u8, x, y, r) {
+                                    next.push((p, layer.place(i)));
+                                    for (i, q) in p.0.iter().enumerate() {
+                                        if !q.is_empty() {
+                                            println!("{}: x = {}, y = {}, r = {}",
+                                                   i/2, q.x(), q.y(), q.r());
+                                        }
+                                    }
+                                    p.pretty_print();
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+            .collect();
+        println!("Got {} possible placements", next.len());
+        todo = next;
+    }
+
+    return Vec::new();
 }
