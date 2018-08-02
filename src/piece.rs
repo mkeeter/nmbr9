@@ -23,11 +23,11 @@ lazy_static! {
         for (i, p) in PIECES.iter().enumerate() {
             out[i] = p.count_ones();
         }
-        let total: u32 = out.iter().sum();
 
         // Piece 11 is a dummy piece that represents the whole world,
         // so it's bigger than the sum of all pieces that we could
         // possibly place.
+        let total: u32 = out.iter().sum();
         out[UNIQUE_PIECE_COUNT] = total * 2 + 1;
 
         return out;
