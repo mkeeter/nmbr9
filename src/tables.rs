@@ -20,7 +20,7 @@ impl Table {
                                       MAX_ROTATIONS * UNIQUE_PIECE_COUNT] }
     }
 
-    fn at(&self, x: i32, y: i32, rot: usize, piece: usize) -> Overlap {
+    pub fn at(&self, x: i32, y: i32, rot: usize, piece: usize) -> Overlap {
         if x > MAX_EDGE_LENGTH || x < -MAX_EDGE_LENGTH ||
            y > MAX_EDGE_LENGTH || y < -MAX_EDGE_LENGTH
         {

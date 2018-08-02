@@ -3,10 +3,12 @@ use std::fmt;
 use std::char::from_digit;
 use std::collections::HashMap;
 use std::time::SystemTime;
+use std::cmp::max;
 
 use rayon::prelude::*;
 
-use piece::{PIECE_AREA, UNIQUE_PIECE_COUNT};
+use piece::{PIECE_AREA, UNIQUE_PIECE_COUNT, Overlap};
+use tables::OVERLAP_TABLES;
 
 lazy_static! {
     pub static ref PIECES_AREA: Vec<u32> = {
@@ -82,6 +84,39 @@ impl Pieces {
     /*  Returns a set containing no pieces */
     fn empty() -> Pieces {
         Pieces(0)
+    }
+
+    fn placements(&self) -> Vec<Placement> {
+        let mut seen = HashSet::new();
+
+        let mut todo = Vec::new();
+        todo.push((Placement::new(), self.clone()));
+
+        // Fully-assembled pieces
+        let mut done = Vec::new();
+
+        while todo.len() > 0 {
+            let mut next = Vec::new();
+            for (placement, remaining) in todo {
+                if seen.contains(&placement) {
+                    continue;
+                }
+
+                if remaining.len() == 0 {
+                    done.push(placement);
+                } else {
+                    // Find which digits still have available pieces
+                    for i in (0..10).filter(|i| { remaining.digit(*i) > 0 }) {
+                        // Try all possible placements here
+                        next.push((placement, remaining.take(i)));
+                    }
+                }
+                seen.insert(placement);
+            }
+            todo = next;
+        }
+
+        return Vec::new();
     }
 }
 
@@ -187,12 +222,71 @@ impl Position {
     }
 }
 
+//  Encodes a full set of pieces, placed on a single 2D layer
 #[derive(Eq, PartialEq, Clone, Debug, Copy, Hash)]
 pub struct Placement([Position; 20]);
 
 impl Placement {
     fn new() -> Placement {
         Placement([Position::empty(); 20])
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.iter().all(|p| p.is_empty())
+    }
+
+    fn place(&self, i: u8, x: i32, y: i32, r: u8) -> Placement {
+        let mut out = self.clone();
+
+        let dx = max(-x, 0);
+        let dy = max(-y, 0);
+        if dx != 0 || dy != 0 {
+            for p in &mut out.0 {
+                if !p.is_empty() {
+                    *p = p.shift(dx, dy);
+                }
+            }
+        }
+
+        let pos = Position::new(x + dx, y + dy, r);
+        let index = (2 * i) as usize;
+        if out.0[index].is_empty() {
+            out.0[index] = pos;
+        } else {
+            debug_assert!(out.0[index + 1].is_empty());
+            out.0[index + 1] = pos;
+        }
+        return out;
+    }
+
+    /*
+     *  Attempts to place a place a new piece on the same layer as this
+     *  placement, returning the resulting placement on success.
+     */
+    fn try_place(&self, i: u8, x: i32, y: i32, r: u8) -> Option<Placement> {
+        debug_assert!(r < 4);
+        debug_assert!(i < 10);
+
+        let piece = ((i * 4) + r) as usize;
+
+        let mut got_neighbor = false;
+        for p in self.0.iter() {
+            let r = OVERLAP_TABLES.at(piece).at(p.x() - x, p.y() - y, i as usize, r as usize); // TODO: remove usizes
+            match r {
+                Overlap::_Partial(_) => panic!("Uncleaned index"),
+                Overlap::None => (),
+                Overlap::Neighbor => got_neighbor = true,
+                Overlap::Partial(t) => return None,
+                Overlap::Full => return None,
+            }
+        }
+
+        if got_neighbor {
+            return Some(self.place(i, x, y, r));
+        } else {
+            return None;
+        }
+
     }
 }
 
@@ -234,6 +328,8 @@ impl Graph {
 
 fn possible_overlaps() -> Vec<(Pieces, Pieces)> {
     let mut out = Vec::new();
+    let mut pieces = HashSet::new();
+
     for i in 0..(3 as u16).pow(10) {
         println!("{}", i);
         let mut d: Vec<(Pieces, Pieces)> = (0..(3 as u16).pow(10))
@@ -246,7 +342,7 @@ fn possible_overlaps() -> Vec<(Pieces, Pieces)> {
                 if a.area() < b.area() { return false; }
 
                 for q in 0..10 {
-                    if a.digit(q) + b.digit(q) <= 2 {
+                    if a.digit(q) + b.digit(q) > 2 {
                         return false;
                     }
                 }
@@ -255,6 +351,17 @@ fn possible_overlaps() -> Vec<(Pieces, Pieces)> {
             .collect();
         out.append(&mut d);
     }
-    println!("Got {} possible overlaps", out.len());
+
+
+    for (a, b) in out.iter() {
+        pieces.insert(a.clone());
+        pieces.insert(b.clone());
+    }
+
+    for p in pieces.iter() {
+        println!("{:?}", p);
+    }
+
+    println!("Got {} possible overlaps of {} pieces", out.len(), pieces.len());
     return out;
 }
