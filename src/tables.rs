@@ -2,7 +2,6 @@ use std::collections::{VecDeque, HashMap};
 
 use piece::{UNIQUE_PIECE_COUNT, MAX_ROTATIONS, MAX_EDGE_LENGTH, PIECES};
 use piece::{Piece, Overlap};
-use state::Placed;
 
 const OVERLAP_SIZE: usize = (2 * MAX_EDGE_LENGTH + 1) as usize;
 lazy_static! {
@@ -48,10 +47,6 @@ impl Table {
         x + OVERLAP_SIZE *
             (y + OVERLAP_SIZE *
                 (rot + MAX_ROTATIONS * piece))
-    }
-
-    pub fn check(&self, x: i32, y: i32, p: &Placed) -> Overlap {
-        self.at(x - p.x, y - p.y, p.rot(), p.index())
     }
 }
 
