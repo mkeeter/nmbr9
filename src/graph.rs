@@ -4,7 +4,7 @@ use std::char::from_digit;
 use std::collections::HashMap;
 use std::time::SystemTime;
 use std::cmp::max;
-use std::sync::RwLock;
+use std::sync::{Mutex, RwLock};
 
 use rayon::prelude::*;
 use colored::*;
@@ -246,11 +246,10 @@ impl Placement {
             }
         }
 
-        let piece = ((i * 4) + r) as usize;
-
         let mut got_neighbor = false;
-        for p in self.0.iter() {
-            let r = OVERLAP_TABLES.at(piece).at(p.x() - x, p.y() - y, i as usize, r as usize); // TODO: remove usizes
+        for (n, p) in self.0.iter().enumerate().filter(|(_, p)| !p.is_empty()) {
+            let index = (n / 2) * 4 + (p.r() as usize);
+            let r = OVERLAP_TABLES.at(index).at(p.x() - x, p.y() - y, r, i);
             match r {
                 Overlap::_Partial(_) => panic!("Uncleaned index"),
                 Overlap::None => (),
@@ -279,7 +278,7 @@ impl Placement {
         let mut v = vec![-1; (w * h) as usize];
 
         for (i, a) in self.0.iter().enumerate().filter(|(_, a)| !a.is_empty()) {
-            let p = Piece::from_u16(PIECES[i / 2]).rotn(a.r() as usize); // TODO
+            let p = Piece::from_u16(PIECES[i / 2]).rotn(a.r());
             for (px, py) in p.pts {
                 let x = px + a.x();
                 let y = py + a.y();
@@ -388,12 +387,11 @@ fn possible_placements() -> Vec<Placement> {
     todo.push((Placement::new(),
                Layer { placed: Pieces::empty(), remaining: Pieces::all() }));
 
-    while todo.len() > 0 {
-        let mut next = Vec::new();
-        if todo[0].1.placed.len() >= 2 { break; }
+    let timer = SystemTime::now();
 
+    while todo.len() > 0 {
         // Skip all placements that have already been seen
-        let _done: Vec<_> = todo.into_iter()
+        let next: Vec<_> = todo.into_par_iter()
             .filter(|(placement, layer)| seen.read()
                                              .unwrap()
                                              .get(&layer.placed)
@@ -413,6 +411,9 @@ fn possible_placements() -> Vec<Placement> {
                     debug_assert!(!i);
                 }
 
+
+                let mut next = Vec::new();
+
                 // Iterate over all of the possible pieces, rotations,
                 // and positions, checking to see which placements are valid
                 let size = placement.size();
@@ -422,22 +423,25 @@ fn possible_placements() -> Vec<Placement> {
                             for y in -4..=size.1 + 4 {
                                 if let Some(p) = placement.try_place(i as u8, x, y, r) {
                                     next.push((p, layer.place(i)));
+                                    /*
                                     for (i, q) in p.0.iter().enumerate() {
                                         if !q.is_empty() {
-                                            println!("{}: x = {}, y = {}, r = {}",
-                                                   i/2, q.x(), q.y(), q.r());
+                                            println!("i: {}: x = {}, y = {}, r = {}",
+                                                   i, q.x(), q.y(), q.r());
                                         }
                                     }
                                     p.pretty_print();
+                                    */
                                 }
                             }
                         }
                     }
                 }
+                return next;
             })
-            .collect();
-        println!("Got {} possible placements", next.len());
+            .reduce(|| Vec::new(), |mut a, mut v| { a.append(&mut v); return a});
         todo = next;
+        println!("Got {} possible placements in {:?}", todo.len(), timer.elapsed());
     }
 
     return Vec::new();

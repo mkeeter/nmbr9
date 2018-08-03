@@ -19,7 +19,7 @@ impl Table {
                                       MAX_ROTATIONS * UNIQUE_PIECE_COUNT] }
     }
 
-    pub fn at(&self, x: i32, y: i32, rot: usize, piece: usize) -> Overlap {
+    pub fn at(&self, x: i32, y: i32, rot: u8, piece: u8) -> Overlap {
         if x > MAX_EDGE_LENGTH || x < -MAX_EDGE_LENGTH ||
            y > MAX_EDGE_LENGTH || y < -MAX_EDGE_LENGTH
         {
@@ -29,13 +29,13 @@ impl Table {
         }
     }
 
-    fn store(&mut self, x: i32, y: i32, rot: usize, piece: usize, d: Overlap) {
+    fn store(&mut self, x: i32, y: i32, rot: u8, piece: u8, d: Overlap) {
         self.data[Table::index(x, y, rot, piece)] = d;
     }
 
-    fn index(x: i32, y: i32, rot: usize, piece: usize) -> usize {
-        debug_assert!(piece < UNIQUE_PIECE_COUNT);
-        debug_assert!(rot < MAX_ROTATIONS);
+    fn index(x: i32, y: i32, rot: u8, piece: u8) -> usize {
+        debug_assert!((piece as usize) < UNIQUE_PIECE_COUNT);
+        debug_assert!((rot as usize) < MAX_ROTATIONS);
         debug_assert!(x <= MAX_EDGE_LENGTH);
         debug_assert!(x >= -MAX_EDGE_LENGTH);
         debug_assert!(y <= MAX_EDGE_LENGTH);
@@ -43,6 +43,9 @@ impl Table {
 
         let x = (x + MAX_EDGE_LENGTH) as usize;
         let y = (y + MAX_EDGE_LENGTH) as usize;
+
+        let rot = rot as usize;
+        let piece = piece as usize;
 
         x + OVERLAP_SIZE *
             (y + OVERLAP_SIZE *
@@ -113,9 +116,9 @@ impl Tables {
             out.tables.push(Table::new());
             let t = Piece::from_u16(t);
 
-            for i in 0..UNIQUE_PIECE_COUNT {
-                let mut p = Piece::from_u16(PIECES[i]);
-                for r in 0..MAX_ROTATIONS {
+            for i in 0..(UNIQUE_PIECE_COUNT as u8) {
+                let mut p = Piece::from_u16(PIECES[i as usize]);
+                for r in 0..(MAX_ROTATIONS as u8) {
                     for x in -MAX_EDGE_LENGTH..=MAX_EDGE_LENGTH {
                         for y in -MAX_EDGE_LENGTH..=MAX_EDGE_LENGTH {
                             let mut result = p.check(&t, x, y);

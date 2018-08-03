@@ -94,7 +94,7 @@ impl Piece {
         Piece::from_pts(self.pts.iter().map(|&(x, y)| (y, -x + 3)).collect())
     }
 
-    pub fn rotn(&self, rot: usize) -> Piece {
+    pub fn rotn(&self, rot: u8) -> Piece {
         let mut out = self.clone();
         for _ in 0..rot {
             out = out.rot();
